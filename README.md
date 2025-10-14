@@ -22,7 +22,7 @@ import scaleUI from 'ui-scaler'
 
 ...
 
-// by the end of the file
+// last line
 scaleUI()
 ```
 
@@ -35,7 +35,7 @@ scaleUI()
 ```
 
 ## Demo
-The script will make sure your app proportions and relative sizes are all the same across different desktop resolutions:
+The script will make sure your app proportions and relative sizes are the same across all different desktop resolutions:
 
 ![UI scaler demo](demo.gif)
 
@@ -45,17 +45,18 @@ The script will make sure your app proportions and relative sizes are all the sa
 
 1. Has 8kb
 2. Runs once the document is ready
-3. Optionally, adds the style transformations, converting pixels values to rem
+3. Optionally, adds style transformations logic, converting pixels values to rem values
 4. Adds a window resize event listener that updates the HTML tag font-size based on the screen resolution and browser font-size
 
-Notice your app HTML font-size to be different in each screen resolution.
+Notice your app HTML font-size to be different in each screen resolution
+
 All properties with rem values will respond and adjust accordingly
 
 ## Options
 
-You can pass an argument to the `scaleUI(boolean | TransformPixelsOptions)` method, instructing the script to attempt converting pixel styles to rem:
+You can pass an argument to the `scaleUI(boolean | TransformPixelsOptions)` method, instructing the script to attempt converting pixels values to rem:
 
-#### Default transform options
+#### Default transform options example
 
 The script will try to convert all document pixel styles to the respective rem definition
 
@@ -68,9 +69,9 @@ import scaleUI from 'ui-scaler'
 scaleUI(true)
 ```
 
-#### Custom transform options
+#### Custom transform options example
 
-The script will try to convert all document pixel styles to the respective rem definition, excluding border-radius definitions and elements with `myCustomId` or `my-custom-class`
+The script will try to convert all document pixel styles to the respective rem definition, excluding border-radius attributes, and elements with `myCustomId` id or `my-custom-class` class
 
 ```JavaScript
 // main.ts
@@ -78,7 +79,10 @@ import scaleUI from 'ui-scaler'
 
 ...
 
-scaleUI({ excludeAttributes: ['border-radius'], excludeSelectors: ['#myCustomId', '.my-custom-class'] })
+scaleUI({
+  excludeAttributes: ['border-radius'],
+  excludeSelectors: ['#myCustomId', '.my-custom-class']
+})
 ```
 
 #### Bypassing transformations
