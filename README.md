@@ -37,7 +37,7 @@ scaleUI()
 ## Demo
 The script will make sure your app proportions and relative sizes are the same across all different desktop resolutions:
 
-![UI scaler demo](demo.gif)
+![UI scaler demo](ui-scaler-demo.gif)
 
 ## How it's done
 
