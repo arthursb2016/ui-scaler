@@ -20,7 +20,7 @@ function transformExistingStyles(shouldTransformPixels: boolean, options: Transf
   })
   const style = document.createElement('style')
   style.setAttribute('type', 'text/css')
-  style.setAttribute('data-scaler-js-transformations', 'true')
+  style.setAttribute('data-ui-scaler-transformations', 'true')
   style.textContent = transformations.replace(/\n/g, '')
   document.head.appendChild(style)
 }
@@ -58,7 +58,7 @@ function observeNewlyAddedStyles(shouldTransformPixels: boolean, options: Transf
 export default function(transformParams?: 'runtime' | TransformPixelsOptions | boolean) {
   function scaleUI() {
     const htmlElem = document.querySelector('html')
-    const transformPixelsAttr = htmlElem?.getAttribute('data-scaler-js-transform-pixels')
+    const transformPixelsAttr = htmlElem?.getAttribute('data-ui-scaler-transform-pixels')
     const hasRuntimeOption = transformParams === 'runtime' && transformPixelsAttr != 'false'
     const hasCustomOptions = typeof transformParams === 'object'
 
@@ -79,7 +79,7 @@ export default function(transformParams?: 'runtime' | TransformPixelsOptions | b
 
     const script = scalerScript()
     const scriptTag = document.createElement('script')
-    scriptTag.setAttribute('data-scaler-js-html-font-size-watcher', 'true')
+    scriptTag.setAttribute('data-ui-scaler-html-font-size-watcher', 'true')
     scriptTag.textContent = script
     document.head.appendChild(scriptTag)
   }
