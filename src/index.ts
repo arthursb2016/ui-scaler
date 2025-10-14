@@ -15,7 +15,7 @@ function transformExistingStyles(shouldTransformPixels: boolean, options: Transf
         if (transformedRules) transformations += '\n' + transformedRules
       })
     } catch (error) {
-      console.warn('Scaler-js: Could not access a stylesheet rule. This might or might not affect your page responsiveness', error)
+      console.warn('ui-scaler: Could not access a stylesheet rule. This might or might not affect your page responsiveness', error, styleSheet)
     }
   })
   const style = document.createElement('style')
