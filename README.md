@@ -4,11 +4,16 @@ Your best ally for easily building responsive web applications:
 
 Build your web interface in one single resolution, and the package will scale the UI for all desktop resolutions
 
+## Demo
+The package will make sure your app proportions and relative sizes are the same across all different desktop resolutions:
+
+![UI scaler demo](ui-scaler-demo.gif)
+
 ## Usage
 
 There are two usage methods:
 
-#### NPM / YARN
+#### 1. NPM / YARN
 
 ```
 npm i ui-scaler
@@ -26,18 +31,13 @@ import scaleUI from 'ui-scaler'
 scaleUI()
 ```
 
-#### Script tag
+#### 2. Script tag
 
 ```HTML
 <head>
-  <script src="https://cdn.jsdelivr.net/npm/ui-scaler@1.0.0/dist/browser-bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/ui-scaler@1.0.3/dist/browser-bundle.min.js"></script>
 </head>
 ```
-
-## Demo
-The script will make sure your app proportions and relative sizes are the same across all different desktop resolutions:
-
-![UI scaler demo](ui-scaler-demo.gif)
 
 ## How it's done
 
@@ -45,12 +45,14 @@ The script will make sure your app proportions and relative sizes are the same a
 
 1. Has 8kb
 2. Runs once the document is ready
-3. Optionally, adds style transformations logic, converting pixels values to rem values
+3. Optionally, adds style transformations logic, converting pixels values to rem values (see how to activate below)
 4. Adds a window resize event listener that updates the HTML tag font-size based on the screen resolution and browser font-size
 
 Notice your app HTML font-size to be different in each screen resolution
 
-All properties with rem values will respond and adjust accordingly
+All properties with **rem values** will respond and adjust accordingly
+
+Font size styles take in consideration the user browser font-size definition
 
 ## Options
 
