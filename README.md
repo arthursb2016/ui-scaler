@@ -15,7 +15,7 @@ You will also notice an easier experience when adjusting the UI for mobile resol
 
 ## Advantage
 
-You don't need to waste time checking or adjusting your interface on different desktop screen resolutions, it will basically look the same in all of them
+You don’t need to waste time checking or adjusting your interface across different desktop screen resolutions — it will look virtually the same on all of them.
 
 ## Usage
 
@@ -27,10 +27,14 @@ There are two usage methods:
 npm i ui-scaler
 ```
 
+```
+yarn add ui-scaler
+```
+
 Then in your app entry point:
 
 ```JavaScript
-// main.ts
+// main.js|ts
 import scaleUI from 'ui-scaler'
 
 ...
@@ -39,7 +43,9 @@ import scaleUI from 'ui-scaler'
 scaleUI()
 ```
 
-#### 2. Script tag
+#### 2. Script tag (CDN or local file)
+
+Add to your `index.html`:
 
 ```HTML
 <head>
@@ -53,14 +59,14 @@ scaleUI()
 
 1. Has 8kb
 2. Runs once the document is ready
-3. Adds a window resize event listener that updates the HTML tag font-size based on the screen resolution and browser font-size
+3. Adds a window resize event listener that updates the HTML element font-size, based on the screen resolution, and the browser font-size
 4. Optionally, adds styles transformation logic that convert pixel values to rem values (see how to activate below) 
 
 Notice your app HTML font-size to be different in each screen resolution
 
-All properties with **rem values** will respond and adjust accordingly the HTML font-size change on different resolutions
+All properties with **rem values** will respond, and adjust accordingly 
 
-Font size styles take in consideration the user browser font-size definition
+Font-size styles take in consideration the user browser font-size definition, so we have a web accessible compliant solution
 
 ## Options
 
