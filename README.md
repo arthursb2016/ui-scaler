@@ -4,10 +4,14 @@ Your best ally for easily building responsive web applications:
 
 Build your web interface in one single resolution, and the package will scale the UI for all desktop resolutions
 
+The package works well with any library or framework that styles defined in **rem**, such as TailwindCSS
+
 ## Demo
-The package will make sure your app proportions and relative sizes are the same across all different desktop resolutions:
+ui-scaler will make sure your app proportions and relative sizes are the same across all different desktop resolutions:
 
 ![UI scaler demo](ui-scaler-demo.gif)
+
+You will also notice an easier experience when adjusting the UI for mobile resolutions, since all elements proportions will look good
 
 ## Usage
 
@@ -45,18 +49,18 @@ scaleUI()
 
 1. Has 8kb
 2. Runs once the document is ready
-3. Optionally, adds style transformations logic, converting pixels values to rem values (see how to activate below)
-4. Adds a window resize event listener that updates the HTML tag font-size based on the screen resolution and browser font-size
+3. Adds a window resize event listener that updates the HTML tag font-size based on the screen resolution and browser font-size
+4. Optionally, adds styles transformation logic that convert pixel values to rem values (see how to activate below) 
 
 Notice your app HTML font-size to be different in each screen resolution
 
-All properties with **rem values** will respond and adjust accordingly
+All properties with **rem values** will respond and adjust accordingly the HTML font-size change on different resolutions
 
 Font size styles take in consideration the user browser font-size definition
 
 ## Options
 
-You can pass an argument to the `scaleUI(boolean | TransformPixelsOptions)` method, instructing the script to attempt converting pixels values to rem:
+You can pass an argument to the `scaleUI(boolean | TransformPixelsOptions)` method, instructing the script to attempt to convert pixel values to rem:
 
 #### Default transform options example
 
