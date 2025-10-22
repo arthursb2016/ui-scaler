@@ -2,12 +2,12 @@
 
 Your best ally for easily building responsive web applications:
 
-Build your web interface in one single resolution, and the package will scale the UI for all desktop resolutions
+Build your interface in one single resolution, and let the package take care of the rest, scaling your `sizes`, `paddings`, `margins`, `font-sizes`, and more for all desktop resolutions
 
-The package works well with any library or framework that styles defined in **rem**, such as TailwindCSS
+It works with a single line of execution, and has great synergy with any library or framework that has styles defined in **rem**, such as TailwindCSS
 
 ## Demo
-ui-scaler will make sure your app proportions and relative sizes are the same across all different desktop resolutions:
+**ui-scaler** will make sure your app proportions and relative sizes are the same across all different desktop resolutions:
 
 ![UI scaler demo](ui-scaler-demo.gif)
 
