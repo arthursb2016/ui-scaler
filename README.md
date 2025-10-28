@@ -9,7 +9,7 @@ It works with a single line of execution, and has great synergy with any library
 ## Demo
 **ui-scaler** will make sure your app proportions and relative sizes are the same across all desktop resolutions. The effect is most recognized in higher screen resolutions:
 
-![UI scaler demo](ui-scaler-demo.gif)
+![UI scaler demo](https://lnx-tech.atl1.cdn.digitaloceanspaces.com/open-source/ui-scaler/ui-scaler-demo.gif)
 
 You will also notice an easier experience when adjusting the UI for mobile resolutions, since all elements proportions will look good, leaving to you just the effort of repositioning and realigning the elements
 
@@ -21,14 +21,10 @@ You don’t need to waste time checking or adjusting your interface across diffe
 
 There are two usage methods:
 
-#### 1. NPM / YARN
+#### 1. NPM
 
 ```
 npm i ui-scaler
-```
-
-```
-yarn add ui-scaler
 ```
 
 Then in your app entry point:
