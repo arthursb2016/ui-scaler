@@ -11,7 +11,9 @@ It works with a single line of execution, and has great synergy with any library
 
 ![UI scaler demo](https://lnx-tech.atl1.cdn.digitaloceanspaces.com/open-source/ui-scaler/ui-scaler-demo.gif)
 
-You will also notice an easier experience when adjusting the UI for mobile resolutions, since all elements proportions will look good, leaving to you just the effort of repositioning and realigning the elements
+You will also notice an easier experience when adjusting the UI for portrait or mobile resolutions, since all elements proportions will look good, leaving to you just the effort of repositioning and realigning the elements
+
+![UI scaler portrait demo](https://lnx-tech.atl1.cdn.digitaloceanspaces.com/open-source/ui-scaler/ui-scaler-portrait-demo.gif)
 
 ## Advantage
 
@@ -45,7 +47,7 @@ Add to your `index.html`:
 
 ```HTML
 <head>
-  <script src="https://cdn.jsdelivr.net/npm/ui-scaler@1.0.4/dist/browser-bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/ui-scaler@1.0.5/dist/browser-bundle.min.js"></script>
 </head>
 ```
 
@@ -115,4 +117,23 @@ You can also add the `ignore-ui-scaler` class to any HTML element so the script 
 <div class="width-300 ignore-ui-scaler">
   My width will remain in pixels!
 </div>
+```
+
+#### HTML options binding
+
+In case you are using the `<script src="..."></script>` installation method, and want to transform pixels, you can add a
+`data-ui-scaler-opts` attribute to your HTML tag element:
+
+```
+<html data-ui-scaler-opts="true">
+...
+</html>
+```
+
+or
+
+```
+<html data-ui-scaler-opts="{ excludeAttributes: ['border-radius'] }">
+...
+</html>
 ```

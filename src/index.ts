@@ -58,7 +58,7 @@ function observeNewlyAddedStyles(shouldTransformPixels: boolean, options: Transf
 export default function(transformParams?: 'runtime' | TransformPixelsOptions | boolean) {
   function scaleUI() {
     const htmlElem = document.querySelector('html')
-    const transformPixelsAttr = htmlElem?.getAttribute('data-ui-scaler-transform-pixels')
+    const transformPixelsAttr = htmlElem?.getAttribute('data-ui-scaler-opts')
     const hasRuntimeOption = transformParams === 'runtime' && transformPixelsAttr != 'false'
     const hasCustomOptions = typeof transformParams === 'object'
 
