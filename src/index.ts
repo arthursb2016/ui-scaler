@@ -4,6 +4,7 @@ import { TransformPixelsOptions } from './types'
 import { transformPixelsDefault } from './options'
 
 import scalerScript from './script'
+import { htmlTagBaseFontSize } from './constants'
 
 function transformExistingStyles(shouldTransformPixels: boolean, options: TransformPixelsOptions) {
   let transformations = ''
@@ -55,10 +56,13 @@ function observeNewlyAddedStyles(shouldTransformPixels: boolean, options: Transf
 }
 
 
-export default function(transformParams?: 'runtime' | TransformPixelsOptions | boolean) {
+export default function(transformParams?: 'runtime' | TransformPixelsOptions | boolean, baseFontSize?: number) {
+  let baseFontSizeValue = baseFontSize ?? htmlTagBaseFontSize
+
   function scaleUI() {
     const htmlElem = document.querySelector('html')
-    const transformPixelsAttr = htmlElem?.getAttribute('data-ui-scaler-opts')
+    const transformPixelsAttr = htmlElem?.getAttribute('data-ui-scaler-transform-opts')
+    const baseFontSizeAttr = htmlElem?.getAttribute('data-ui-scaler-base-font-size')
     const hasRuntimeOption = transformParams === 'runtime' && transformPixelsAttr != 'false'
     const hasCustomOptions = typeof transformParams === 'object'
 
@@ -77,7 +81,9 @@ export default function(transformParams?: 'runtime' | TransformPixelsOptions | b
       observeNewlyAddedStyles(shouldTransformPixels, transformPixelsOptions)
     })
 
-    const script = scalerScript()
+    baseFontSizeValue = transformParams === 'runtime' && baseFontSizeAttr ? Number(baseFontSizeAttr) : baseFontSizeValue
+
+    const script = scalerScript(baseFontSizeValue)
     const scriptTag = document.createElement('script')
     scriptTag.setAttribute('data-ui-scaler-html-font-size-watcher', 'true')
     scriptTag.textContent = script

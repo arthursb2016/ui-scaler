@@ -66,9 +66,11 @@ All properties with **rem values** will respond, and adjust accordingly
 
 Font-size styles take in consideration the user browser font-size definition, so we have a web accessible compliant solution
 
-## Options
+## Parameters (optional)
 
-You can pass an argument to the `scaleUI(boolean | TransformPixelsOptions)` method, instructing the script to attempt to convert pixel values to rem:
+## 1) Transform pixels:
+
+The first argument to the `scaleUI(boolean | TransformPixelsOptions)` method, instructs the script to convert styles pixel values to rem:
 
 #### Default transform options example
 
@@ -85,7 +87,9 @@ scaleUI(true)
 
 #### Custom transform options example
 
-The script will try to convert all document pixel styles to the respective rem definition, excluding border-radius attributes, and elements with `myCustomId` id or `my-custom-class` class
+You can exclude given attributes and/or selectors from this transformation, by passing an object.
+
+In below example, `border-radius` styles and elements with `#myCustomId` id will keep their styles in pixels.
 
 ```JavaScript
 // main.ts
@@ -95,13 +99,13 @@ import scaleUI from 'ui-scaler'
 
 scaleUI({
   excludeAttributes: ['border-radius'],
-  excludeSelectors: ['#myCustomId', '.my-custom-class']
+  excludeSelectors: ['#myCustomId']
 })
 ```
 
 #### Bypassing transformations
 
-You can also add the `ignore-ui-scaler` class to any HTML element so the script transformations do not have effect. Example:
+When using the `TransformPixelsOptions` argument, you can also add a `ignore-ui-scaler` class to any HTML element so the script transformations do not affect it. Example:
 
 ```HTML
 <style>
@@ -119,13 +123,31 @@ You can also add the `ignore-ui-scaler` class to any HTML element so the script 
 </div>
 ```
 
-#### HTML options binding
+## 2) Base font size:
 
-In case you are using the `<script src="..."></script>` installation method, and want to transform pixels, you can add a
-`data-ui-scaler-opts` attribute to your HTML tag element:
+The second argument to the `scaleUI(..., number)` method adjusts the base font size used in the script math.
+
+This is useful if your elements are looking either too big or too small after applying the package.
+
+The default value is `16`, so if your elements are looking too big, try using `14` or `12`. In case they are too small, try using larger values such as `18` or `20`. Fine adjust this value until you get your perfect UI.
+
+Example:
+```JavaScript
+import scaleUI from 'ui-scaler'
+
+...
+
+scaleUI(false, 14)
+```
+
+## HTML options binding
+
+In case you are using the `<script src="..."></script>` installation method, and you want pass any customization options to the script, add the attributes below to your html element:
+1) `data-ui-scaler-transform-opts`
+2) `data-ui-scaler-base-font-size`
 
 ```
-<html data-ui-scaler-opts="true">
+<html data-ui-scaler-tranform-opts="true" data-ui-scaler-base-font-size="20">
 ...
 </html>
 ```
@@ -133,7 +155,7 @@ In case you are using the `<script src="..."></script>` installation method, and
 or
 
 ```
-<html data-ui-scaler-opts="{ excludeAttributes: ['border-radius'] }">
+<html data-ui-scaler-transform-opts="{ excludeAttributes: ['border-radius'] }">
 ...
 </html>
 ```

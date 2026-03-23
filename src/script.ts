@@ -1,6 +1,6 @@
 import { htmlTagBaseFontSize, browserFontSizeDiffVarName } from './constants'
 
-export default () => {
+export default (baseFontSize: number) => {
   return `
     if (typeof window !== 'undefined') {
       const baseFontSize = ${htmlTagBaseFontSize}
@@ -26,8 +26,9 @@ export default () => {
       }
 
       const setVirtualRemFontSize = function(htmlElement) {
-        const vRem = getVirtualRemFontSize(window.innerWidth, window.innerHeight)
-        htmlElement.style.setProperty('font-size', vRem + 'px')
+        const vRemFull = getVirtualRemFontSize(window.innerWidth, window.innerHeight)
+        const vRemAdjusted = vRemFull + (${baseFontSize} - ${htmlTagBaseFontSize})
+        htmlElement.style.setProperty('font-size', vRemAdjusted + 'px')
       }
 
       const updateHtmlFontSize = function() {
