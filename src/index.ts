@@ -5,12 +5,26 @@ import { transformPixelsDefault, uiScalerOptionsDefault } from './options'
 
 import scalerScript from './script'
 
+function collectStyleRules(cssRules: CSSRuleList): CSSStyleRule[] {
+  const styleRules: CSSStyleRule[] = []
+  Array.from(cssRules).forEach((rule) => {
+    if (rule instanceof CSSStyleRule) {
+      styleRules.push(rule)
+    } else if ('cssRules' in rule) {
+      // Recurse into grouping rules such as @layer, @media, @supports, @container, etc.,
+      // since TailwindCSS wraps its utility classes (e.g. font-size) inside @layer blocks
+      styleRules.push(...collectStyleRules((rule as CSSGroupingRule).cssRules))
+    }
+  })
+  return styleRules
+}
+
 function transformExistingStyles(shouldTransformPixels: boolean, options: TransformPixelsOptions) {
   let transformations = ''
   Array.from(document.styleSheets).forEach((styleSheet: CSSStyleSheet) => {
     try {
       const cssRules = styleSheet.cssRules
-      Array.from(cssRules).filter((i) => i instanceof CSSStyleRule).forEach((rule) => {
+      collectStyleRules(cssRules).forEach((rule) => {
         const transformedRules = transformCss(shouldTransformPixels, options, rule)
         if (transformedRules) transformations += '\n' + transformedRules
       })
@@ -34,7 +48,7 @@ function observeNewlyAddedStyles(shouldTransformPixels: boolean, options: Transf
             const styleEl = node as HTMLStyleElement
             if (styleEl.sheet) {
               let transformations = ''
-              Array.from(styleEl.sheet.cssRules).filter((i) => i instanceof CSSStyleRule).forEach((rule) => {
+              collectStyleRules(styleEl.sheet.cssRules).forEach((rule) => {
                 const transformedRules = transformCss(shouldTransformPixels, options, rule)
                 if (transformedRules) transformations += '\n' + transformedRules
               });
