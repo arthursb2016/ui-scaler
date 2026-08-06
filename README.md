@@ -68,9 +68,20 @@ Font-size styles take in consideration the user browser font-size definition, so
 
 ## Parameters (optional)
 
+`scaleUI` receives a single, optional options object. All fields are optional and fall back to their default values.
+
+```TypeScript
+type UiScalerOptions = {
+  transformPixels?: 'runtime' | TransformPixelsOptions | boolean, // default: false
+  baseFontSize?: number, // default: 16
+  enableLandscapeScaling?: boolean, // default: true
+  enablePortraitScaling?: boolean // default: true
+}
+```
+
 ## 1) Transform pixels:
 
-The first argument to the `scaleUI(boolean | TransformPixelsOptions)` method, instructs the script to convert styles pixel values to rem:
+The `transformPixels` field instructs the script to convert styles pixel values to rem:
 
 #### Default transform options example
 
@@ -82,7 +93,7 @@ import scaleUI from 'ui-scaler'
 
 ...
 
-scaleUI(true)
+scaleUI({ transformPixels: true })
 ```
 
 #### Custom transform options example
@@ -98,8 +109,10 @@ import scaleUI from 'ui-scaler'
 ...
 
 scaleUI({
-  excludeAttributes: ['border-radius'],
-  excludeSelectors: ['#myCustomId']
+  transformPixels: {
+    excludeAttributes: ['border-radius'],
+    excludeSelectors: ['#myCustomId']
+  }
 })
 ```
 
@@ -125,7 +138,7 @@ When using the `TransformPixelsOptions` argument, you can also add a `ignore-ui-
 
 ## 2) Base font size:
 
-The second argument to the `scaleUI(..., number)` method adjusts the base font size used in the script math.
+The `baseFontSize` field adjusts the base font size used in the script math.
 
 This is useful if your elements are looking either too big or too small after applying the package.
 
@@ -137,25 +150,50 @@ import scaleUI from 'ui-scaler'
 
 ...
 
-scaleUI(false, 14)
+scaleUI({ baseFontSize: 14 })
+```
+
+## 3) Orientation scaling:
+
+The `enableLandscapeScaling` and `enablePortraitScaling` fields let you turn the HTML font-size scaling on or off for a given screen orientation. Both default to `true`.
+
+When a field is set to `false`, the script will not apply its font-size scaling logic while the screen is in that orientation, and the browser default font-size will be used instead.
+
+This is useful, for example, if you only want `ui-scaler` to handle desktop/landscape resolutions, while leaving portrait/mobile layouts to your own responsive styles (like `%` or media queries).
+
+Example - disable scaling on portrait resolutions only:
+```JavaScript
+import scaleUI from 'ui-scaler'
+
+...
+
+scaleUI({ enablePortraitScaling: false })
 ```
 
 ## HTML options binding
 
-In case you are using the `<script src="..."></script>` installation method, and you want pass any customization options to the script, add the attributes below to your html element:
-1) `data-ui-scaler-transform-opts`
-2) `data-ui-scaler-base-font-size`
+In case you are using the `<script src="..."></script>` installation method, and you want to pass any customization options to the script, add a single `data-ui-scaler-options` attribute to your html element, containing a stringified JSON object with any of the `UiScalerOptions` fields (see [Parameters](#parameters-optional) above).
 
-```
-<html data-ui-scaler-tranform-opts="true" data-ui-scaler-base-font-size="20">
+```HTML
+<html data-ui-scaler-options='{ "baseFontSize": 20 }'>
 ...
 </html>
 ```
 
 or
 
-```
-<html data-ui-scaler-transform-opts="{ excludeAttributes: ['border-radius'] }">
+```HTML
+<html data-ui-scaler-options='{ "transformPixels": { "excludeAttributes": ["border-radius"] } }'>
 ...
 </html>
 ```
+
+or, combining multiple options:
+
+```HTML
+<html data-ui-scaler-options='{ "transformPixels": true, "baseFontSize": 20, "enablePortraitScaling": false }'>
+...
+</html>
+```
+
+Note: when transforming pixels via the `<script src="..."></script>` method, pixel transformation defaults to `true` unless you explicitly set `"transformPixels": false` in the `data-ui-scaler-options` attribute.

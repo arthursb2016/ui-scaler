@@ -5,4 +5,4 @@
   */
 import scaleUI from './index'
 
-scaleUI('runtime')
+scaleUI({ transformPixels: 'runtime' })

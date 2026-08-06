@@ -1,9 +1,11 @@
 import { htmlTagBaseFontSize, browserFontSizeDiffVarName } from './constants'
 
-export default (baseFontSize: number) => {
+export default (baseFontSize: number, enableLandscapeScaling: boolean, enablePortraitScaling: boolean) => {
   return `
     if (typeof window !== 'undefined') {
       const baseFontSize = ${htmlTagBaseFontSize}
+      const enableLandscapeScaling = ${enableLandscapeScaling}
+      const enablePortraitScaling = ${enablePortraitScaling}
       const segments = { width: 80, height: 45 }
       const preciseBreakpoints = { width: 1320, height: 720 }
 
@@ -34,7 +36,16 @@ export default (baseFontSize: number) => {
       const updateHtmlFontSize = function() {
         const htmlElement = document.querySelector('html');
         setBrowserFontSizeDiff(htmlElement)
-        setVirtualRemFontSize(htmlElement)
+        const isScreenLandscape = window.innerWidth > window.innerHeight
+        const isScreenPortrait = window.innerHeight > window.innerWidth
+        const isScreenSquare = window.innerWidth === window.innerHeight
+        if (isScreenLandscape && enableLandscapeScaling) {
+          setVirtualRemFontSize(htmlElement)
+        } else if (isScreenPortrait && enablePortraitScaling) {
+          setVirtualRemFontSize(htmlElement)
+        } else if (isScreenSquare) {
+          setVirtualRemFontSize(htmlElement)
+        }
       }
 
       const initHtmlFontSizeWatcher = function() {

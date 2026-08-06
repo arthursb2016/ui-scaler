@@ -1,10 +1,9 @@
 import { isValidJsonString } from './utils'
 import transformCss from './transformCss'
-import { TransformPixelsOptions } from './types'
-import { transformPixelsDefault } from './options'
+import { TransformPixelsOptions, UiScalerOptions } from './types'
+import { transformPixelsDefault, uiScalerOptionsDefault } from './options'
 
 import scalerScript from './script'
-import { htmlTagBaseFontSize } from './constants'
 
 function transformExistingStyles(shouldTransformPixels: boolean, options: TransformPixelsOptions) {
   let transformations = ''
@@ -56,34 +55,50 @@ function observeNewlyAddedStyles(shouldTransformPixels: boolean, options: Transf
 }
 
 
-export default function(transformParams?: 'runtime' | TransformPixelsOptions | boolean, baseFontSize?: number) {
-  let baseFontSizeValue = baseFontSize ?? htmlTagBaseFontSize
+const runtimeOptionsDefault: Required<UiScalerOptions> = { ...uiScalerOptionsDefault, transformPixels: true }
+
+function mergeUiScalerOptions(defaults: Required<UiScalerOptions>, overrides?: UiScalerOptions): Required<UiScalerOptions> {
+  return {
+    transformPixels: overrides?.transformPixels ?? defaults.transformPixels,
+    baseFontSize: overrides?.baseFontSize ?? defaults.baseFontSize,
+    enableLandscapeScaling: overrides?.enableLandscapeScaling ?? defaults.enableLandscapeScaling,
+    enablePortraitScaling: overrides?.enablePortraitScaling ?? defaults.enablePortraitScaling
+  }
+}
+
+export default function(options?: UiScalerOptions) {
+  const mergedOptions = mergeUiScalerOptions(uiScalerOptionsDefault, options)
 
   function scaleUI() {
     const htmlElem = document.querySelector('html')
-    const transformPixelsAttr = htmlElem?.getAttribute('data-ui-scaler-transform-opts')
-    const baseFontSizeAttr = htmlElem?.getAttribute('data-ui-scaler-base-font-size')
-    const hasRuntimeOption = transformParams === 'runtime' && transformPixelsAttr != 'false'
-    const hasCustomOptions = typeof transformParams === 'object'
+    const uiScalerOptionsAttr = htmlElem?.getAttribute('data-ui-scaler-options')
+    const isRuntimeMode = mergedOptions.transformPixels === 'runtime'
 
-    const shouldTransformPixels = hasRuntimeOption || hasCustomOptions || transformParams === true
-
-    let transformPixelsOptions
-    if (hasRuntimeOption && transformPixelsAttr && isValidJsonString(transformPixelsAttr)) {
-      transformPixelsOptions = Object.assign(transformPixelsDefault, JSON.parse(transformPixelsAttr))
-    } else if (hasCustomOptions) {
-      transformPixelsOptions = Object.assign(transformPixelsDefault, { ...transformParams })
-    } else {
-      transformPixelsOptions = transformPixelsDefault
+    let runtimeOptions: UiScalerOptions = {}
+    if (isRuntimeMode && uiScalerOptionsAttr && isValidJsonString(uiScalerOptionsAttr)) {
+      runtimeOptions = JSON.parse(uiScalerOptionsAttr) as UiScalerOptions
     }
+
+    const {
+      transformPixels,
+      baseFontSize,
+      enableLandscapeScaling,
+      enablePortraitScaling
+    } = isRuntimeMode ? mergeUiScalerOptions(runtimeOptionsDefault, runtimeOptions) : mergedOptions
+
+    const hasCustomOptions = typeof transformPixels === 'object'
+    const shouldTransformPixels = hasCustomOptions || transformPixels === true
+
+    const transformPixelsOptions = hasCustomOptions
+      ? Object.assign(transformPixelsDefault, { ...transformPixels })
+      : transformPixelsDefault
+
     setTimeout(() => {
       transformExistingStyles(shouldTransformPixels, transformPixelsOptions)
       observeNewlyAddedStyles(shouldTransformPixels, transformPixelsOptions)
     })
 
-    baseFontSizeValue = transformParams === 'runtime' && baseFontSizeAttr ? Number(baseFontSizeAttr) : baseFontSizeValue
-
-    const script = scalerScript(baseFontSizeValue)
+    const script = scalerScript(baseFontSize, enableLandscapeScaling, enablePortraitScaling)
     const scriptTag = document.createElement('script')
     scriptTag.setAttribute('data-ui-scaler-html-font-size-watcher', 'true')
     scriptTag.textContent = script
