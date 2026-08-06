@@ -5,7 +5,7 @@ import { transformPixelsDefault, uiScalerOptionsDefault } from './options'
 
 import scalerScript from './script'
 
-function collectStyleRules(cssRules: CSSRuleList): CSSStyleRule[] {
+export function collectStyleRules(cssRules: CSSRuleList): CSSStyleRule[] {
   const styleRules: CSSStyleRule[] = []
   Array.from(cssRules).forEach((rule) => {
     if (rule instanceof CSSStyleRule) {
@@ -71,7 +71,7 @@ function observeNewlyAddedStyles(shouldTransformPixels: boolean, options: Transf
 
 const runtimeOptionsDefault: Required<UiScalerOptions> = { ...uiScalerOptionsDefault, transformPixels: true }
 
-function mergeUiScalerOptions(defaults: Required<UiScalerOptions>, overrides?: UiScalerOptions): Required<UiScalerOptions> {
+export function mergeUiScalerOptions(defaults: Required<UiScalerOptions>, overrides?: UiScalerOptions): Required<UiScalerOptions> {
   return {
     transformPixels: overrides?.transformPixels ?? defaults.transformPixels,
     baseFontSize: overrides?.baseFontSize ?? defaults.baseFontSize,
