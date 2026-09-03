@@ -1,6 +1,6 @@
 {
   "name": "ui-scaler",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Your best ally for easily building responsive web applications",
   "homepage": "https://uiscaler.com",
   "main": "dist/index.cjs.js",
