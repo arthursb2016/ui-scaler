@@ -55,7 +55,7 @@ Add to your `index.html`:
 
 #### [A script](https://github.com/arthursb2016/ui-scaler/blob/master/src/script.ts) will be added to your app, which:
 
-1. Has 8kb
+1. Has 3kb
 2. Runs once the document is ready
 3. Adds a window resize event listener that updates the HTML element font-size, based on the screen resolution, and the browser font-size
 4. Optionally, adds styles transformation logic that convert pixel values to rem values (see how to activate below) 
