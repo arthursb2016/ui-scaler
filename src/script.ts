@@ -29,7 +29,7 @@ export default (baseFontSize: number, enableLandscapeScaling: boolean, enablePor
 
       const setVirtualRemFontSize = function(htmlElement) {
         const vRemFull = getVirtualRemFontSize(window.innerWidth, window.innerHeight)
-        const vRemAdjusted = vRemFull + (${baseFontSize} - ${htmlTagBaseFontSize})
+        const vRemAdjusted = (vRemFull * window.devicePixelRatio) + (${baseFontSize} - ${htmlTagBaseFontSize})
         htmlElement.style.setProperty('font-size', vRemAdjusted + 'px')
       }
 

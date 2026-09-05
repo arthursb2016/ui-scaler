@@ -47,7 +47,7 @@ Add to your `index.html`:
 
 ```HTML
 <head>
-  <script src="https://cdn.jsdelivr.net/npm/ui-scaler@2.0.0/dist/browser-bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/ui-scaler@2.1.0/dist/browser-bundle.min.js"></script>
 </head>
 ```
 
