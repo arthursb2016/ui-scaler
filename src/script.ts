@@ -27,9 +27,17 @@ export default (baseFontSize: number, enableLandscapeScaling: boolean, enablePor
         document.documentElement.style.setProperty('${browserFontSizeDiffVarName}', browserDifference + 'px')
       }
 
+      function getDesktopZoomFactor() {
+        const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0);
+        if (isTouchDevice) {
+          return 1;
+        }
+        return window.devicePixelRatio || 1;
+      }
+
       const setVirtualRemFontSize = function(htmlElement) {
         const vRemFull = getVirtualRemFontSize(window.innerWidth, window.innerHeight)
-        const vRemAdjusted = (vRemFull * window.devicePixelRatio) + (${baseFontSize} - ${htmlTagBaseFontSize})
+        const vRemAdjusted = (vRemFull * getDesktopZoomFactor()) + (${baseFontSize} - ${htmlTagBaseFontSize})
         htmlElement.style.setProperty('font-size', vRemAdjusted + 'px')
       }
 
