@@ -8,6 +8,7 @@ export default (baseFontSize: number, enableLandscapeScaling: boolean, enablePor
       const enablePortraitScaling = ${enablePortraitScaling}
       const segments = { width: 80, height: 45 }
       const preciseBreakpoints = { width: 1320, height: 720 }
+      const BASELINE_DPR = window.devicePixelRatio || 1
 
       function getVirtualRemFontSize(width, height) {
         const isLandscape = width > height
@@ -32,7 +33,7 @@ export default (baseFontSize: number, enableLandscapeScaling: boolean, enablePor
         if (isTouchDevice) {
           return 1;
         }
-        return window.devicePixelRatio || 1;
+        return (window.devicePixelRatio || 1) / BASELINE_DPR
       }
 
       const setVirtualRemFontSize = function(htmlElement) {
