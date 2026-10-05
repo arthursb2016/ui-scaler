@@ -1,7 +1,8 @@
-import scaleUI, { collectStyleRules, mergeUiScalerOptions } from '../src/index'
+import scaleUI, { collectStyleRules, mergeUiScalerOptions, resolveConfig } from '../src/index'
 import transformCss from '../src/transformCss'
 import scalerScript from '../src/script'
-import { uiScalerOptionsDefault } from '../src/options'
+import { uiScalerOptionsDefault, transformPixelsDefault } from '../src/options'
+import { UiScalerOptions } from '../src/types'
 
 jest.mock('../src/transformCss')
 jest.mock('../src/script')
@@ -89,6 +90,126 @@ describe('collectStyleRules()', () => {
   })
 })
 
+describe('resolveConfig()', () => {
+  const resolve = (options?: UiScalerOptions) =>
+    resolveConfig(mergeUiScalerOptions(uiScalerOptionsDefault, options))
+
+  const setRuntimeAttribute = (value: string) =>
+    document.documentElement.setAttribute('data-ui-scaler-options', value)
+
+  describe('static options (non-runtime mode)', () => {
+    test('returns the default configuration when no options are provided', () => {
+      const config = resolve()
+      expect(config.shouldTransformPixels).toBe(false)
+      expect(config.baseFontSize).toBe(uiScalerOptionsDefault.baseFontSize)
+      expect(config.enableLandscapeScaling).toBe(uiScalerOptionsDefault.enableLandscapeScaling)
+      expect(config.enablePortraitScaling).toBe(uiScalerOptionsDefault.enablePortraitScaling)
+      expect(config.transformPixelsOptions).toBe(transformPixelsDefault)
+    })
+
+    test('passes custom baseFontSize and scaling flags through', () => {
+      const config = resolve({ baseFontSize: 20, enableLandscapeScaling: false, enablePortraitScaling: false })
+      expect(config.baseFontSize).toBe(20)
+      expect(config.enableLandscapeScaling).toBe(false)
+      expect(config.enablePortraitScaling).toBe(false)
+    })
+
+    test('enables pixel transformation with the default options when transformPixels is true', () => {
+      const config = resolve({ transformPixels: true })
+      expect(config.shouldTransformPixels).toBe(true)
+      expect(config.transformPixelsOptions).toBe(transformPixelsDefault)
+    })
+
+    test('enables pixel transformation and merges custom options when transformPixels is an object', () => {
+      const config = resolve({ transformPixels: { excludeAttributes: ['border-radius'] } })
+      expect(config.shouldTransformPixels).toBe(true)
+      expect(config.transformPixelsOptions).toEqual(
+        expect.objectContaining({ excludeAttributes: ['border-radius'] })
+      )
+    })
+
+    test('keeps default values for custom options that are not overridden', () => {
+      const config = resolve({ transformPixels: { excludeAttributes: ['border-radius'] } })
+      expect(config.transformPixelsOptions.excludeSelectors).toEqual(transformPixelsDefault.excludeSelectors)
+    })
+
+    test('returns a new options object instead of the shared defaults when custom options are given', () => {
+      const config = resolve({ transformPixels: { excludeAttributes: ['border-radius'] } })
+      expect(config.transformPixelsOptions).not.toBe(transformPixelsDefault)
+    })
+
+    test('does not mutate the shared default options', () => {
+      const snapshot = JSON.parse(JSON.stringify(transformPixelsDefault))
+      resolve({ transformPixels: { excludeAttributes: ['border-radius'], excludeSelectors: ['#custom'] } })
+      expect(transformPixelsDefault).toEqual(snapshot)
+    })
+
+    test('does not leak custom options into later calls', () => {
+      resolve({ transformPixels: { excludeAttributes: ['border-radius'], excludeSelectors: ['#custom'] } })
+      const later = resolve({ transformPixels: true })
+      expect(later.transformPixelsOptions).toBe(transformPixelsDefault)
+      expect(later.transformPixelsOptions.excludeSelectors).not.toContain('#custom')
+    })
+
+    test('ignores the html attribute when not in runtime mode', () => {
+      setRuntimeAttribute(JSON.stringify({ baseFontSize: 24, transformPixels: true }))
+      const config = resolve({ baseFontSize: 18 })
+      expect(config.baseFontSize).toBe(18)
+      expect(config.shouldTransformPixels).toBe(false)
+    })
+  })
+
+  describe('runtime mode', () => {
+    test('uses the runtime defaults (transformPixels enabled) when the attribute is absent', () => {
+      const config = resolve({ transformPixels: 'runtime' })
+      expect(config.shouldTransformPixels).toBe(true)
+      expect(config.baseFontSize).toBe(uiScalerOptionsDefault.baseFontSize)
+      expect(config.transformPixelsOptions).toBe(transformPixelsDefault)
+    })
+
+    test('applies options from the html attribute', () => {
+      setRuntimeAttribute(JSON.stringify({
+        baseFontSize: 24,
+        enableLandscapeScaling: false,
+        enablePortraitScaling: false
+      }))
+      const config = resolve({ transformPixels: 'runtime' })
+      expect(config.baseFontSize).toBe(24)
+      expect(config.enableLandscapeScaling).toBe(false)
+      expect(config.enablePortraitScaling).toBe(false)
+      expect(config.shouldTransformPixels).toBe(true)
+    })
+
+    test('disables pixel transformation when the attribute sets transformPixels to false', () => {
+      setRuntimeAttribute(JSON.stringify({ transformPixels: false }))
+      const config = resolve({ transformPixels: 'runtime' })
+      expect(config.shouldTransformPixels).toBe(false)
+    })
+
+    test('merges custom transform options coming from the html attribute', () => {
+      setRuntimeAttribute(JSON.stringify({ transformPixels: { excludeAttributes: ['border-radius'] } }))
+      const config = resolve({ transformPixels: 'runtime' })
+      expect(config.shouldTransformPixels).toBe(true)
+      expect(config.transformPixelsOptions).toEqual(
+        expect.objectContaining({ excludeAttributes: ['border-radius'] })
+      )
+      expect(config.transformPixelsOptions).not.toBe(transformPixelsDefault)
+    })
+
+    test('falls back to the runtime defaults when the attribute is not valid JSON', () => {
+      setRuntimeAttribute('{ not valid json')
+      const config = resolve({ transformPixels: 'runtime' })
+      expect(config.shouldTransformPixels).toBe(true)
+      expect(config.baseFontSize).toBe(uiScalerOptionsDefault.baseFontSize)
+    })
+
+    test('takes its settings from the attribute, not from options passed in code', () => {
+      const config = resolve({ transformPixels: 'runtime', baseFontSize: 20 })
+      expect(config.baseFontSize).toBe(uiScalerOptionsDefault.baseFontSize)
+    })
+  })
+})
+
 describe('scaleUI() (default export)', () => {
   test('appends the font-size watcher script tag with default options', () => {
     scaleUI()
@@ -137,13 +258,36 @@ describe('scaleUI() (default export)', () => {
     jest.useRealTimers()
   })
 
-  test('waits for DOMContentLoaded before running when the document is still loading', () => {
+  test('injects the font-size watcher immediately while the document is still loading', () => {
     const readyStateSpy = jest.spyOn(document, 'readyState', 'get').mockReturnValue('loading')
     scaleUI()
-    expect(document.head.querySelector('script[data-ui-scaler-html-font-size-watcher]')).toBeNull()
-
     readyStateSpy.mockRestore()
-    document.dispatchEvent(new Event('DOMContentLoaded'))
+
     expect(document.head.querySelector('script[data-ui-scaler-html-font-size-watcher]')).not.toBeNull()
+  })
+
+  test('waits for DOMContentLoaded before transforming styles while the document is still loading', () => {
+    jest.useFakeTimers()
+    const readyStateSpy = jest.spyOn(document, 'readyState', 'get').mockReturnValue('loading')
+    const addListenerSpy = jest.spyOn(document, 'addEventListener')
+    scaleUI()
+
+    // Read the calls BEFORE restoring: mockRestore() also clears mock.calls
+    const onReady = addListenerSpy.mock.calls.find(([type]) => type === 'DOMContentLoaded')?.[1] as EventListener
+    readyStateSpy.mockRestore()
+    addListenerSpy.mockRestore()
+
+    expect(onReady).toBeDefined()
+
+    jest.runAllTimers()
+    expect(document.head.querySelector('style[data-ui-scaler-transformations]')).toBeNull()
+
+    // Invoke the handler registered by THIS call, rather than dispatching a real event:
+    // a listener left on document by another test could otherwise satisfy the assertion below
+    onReady(new Event('DOMContentLoaded'))
+    jest.runAllTimers()
+    expect(document.head.querySelector('style[data-ui-scaler-transformations]')).not.toBeNull()
+
+    jest.useRealTimers()
   })
 })

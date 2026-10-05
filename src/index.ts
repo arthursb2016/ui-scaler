@@ -84,7 +84,7 @@ export function mergeUiScalerOptions(defaults: Required<UiScalerOptions>, overri
 }
 
 // Resolves the final configuration by merging the default options, user-provided options, and any runtime options specified in the HTML attribute
-function resolveConfig(mergedOptions: Required<UiScalerOptions>): ResolvedConfig {
+export function resolveConfig(mergedOptions: Required<UiScalerOptions>): ResolvedConfig {
   const htmlElem = document.querySelector('html')
   const uiScalerOptionsAttr = htmlElem?.getAttribute('data-ui-scaler-options')
   const isRuntimeMode = mergedOptions.transformPixels === 'runtime'
