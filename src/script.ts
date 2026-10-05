@@ -58,7 +58,14 @@ export default (baseFontSize: number, enableLandscapeScaling: boolean, enablePor
       }
 
       const initHtmlFontSizeWatcher = function() {
-        window.addEventListener('resize', updateHtmlFontSize)
+        let rafId = 0
+        window.addEventListener('resize', function() {
+          if (rafId) return
+          rafId = window.requestAnimationFrame(function() {
+            rafId = 0
+            updateHtmlFontSize()
+          })
+        })
         updateHtmlFontSize()
       }
 
