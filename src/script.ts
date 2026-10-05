@@ -15,6 +15,7 @@ export default (baseFontSize: number, enableLandscapeScaling: boolean, enablePor
       const segments = { width: 80, height: 45 }
       const preciseBreakpoints = { width: 1320, height: 720 }
       const BASELINE_DPR = window.devicePixelRatio || 1
+      const coarsePointerQuery = typeof window.matchMedia === 'function' ? window.matchMedia('(pointer: coarse)') : null
 
       function getVirtualRemFontSize(width, height) {
         const isLandscape = width > height
@@ -46,9 +47,15 @@ export default (baseFontSize: number, enableLandscapeScaling: boolean, enablePor
         htmlElement.style.setProperty('${browserFontSizeDiffVarName}', browserDifference + 'px')
       }
 
+      function isTouchPrimaryDevice() {
+        if (coarsePointerQuery) {
+          return coarsePointerQuery.matches
+        }
+        return ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0)
+      }
+
       function getDesktopZoomFactor() {
-        const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0);
-        if (isTouchDevice) {
+        if (isTouchPrimaryDevice()) {
           return 1;
         }
         return (window.devicePixelRatio || 1) / BASELINE_DPR

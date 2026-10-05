@@ -43,6 +43,17 @@ const simulateNonTouchBrowser = () => {
   }
 }
 
+// jsdom has no matchMedia. Returns a mutable state so tests can flip the primary pointer,
+// and the mock reads it live, like a real MediaQueryList
+const mockPointerMedia = (coarse: boolean) => {
+  const state = { coarse }
+  win.matchMedia = jest.fn((query: string) => ({
+    get matches() { return query === '(pointer: coarse)' && state.coarse },
+    media: query
+  }))
+  return state
+}
+
 const resize = () => {
   window.dispatchEvent(new Event('resize'))
   flushFrames()
@@ -78,6 +89,7 @@ beforeEach(() => {
   setViewport(1920, 1080)
   setDevicePixelRatio(1)
   simulateNonTouchBrowser()
+  win.matchMedia = undefined
 })
 
 afterEach(() => {
@@ -94,6 +106,7 @@ afterEach(() => {
     Object.defineProperty(target, 'ontouchstart', descriptor)
   }
   setDevicePixelRatio(originalDevicePixelRatio)
+  delete win.matchMedia
   jest.restoreAllMocks()
 })
 
@@ -242,22 +255,70 @@ describe('zoom compensation', () => {
     expect(getFontSize()).toBe('36px')
   })
 
-  // Document current behavior: any touch-capable device skips the compensation
-  // (the pointer: coarse PR will change these tests)
-  test('skips the compensation when the device reports touch points', () => {
-    Object.defineProperty(navigator, 'maxTouchPoints', { value: 1, configurable: true })
-    runScript()
-    setDevicePixelRatio(1.5)
-    resize()
-    expect(getFontSize()).toBe('24px')
+  describe('when matchMedia is available', () => {
+    test('queries the primary pointer, not any-pointer', () => {
+      mockPointerMedia(false)
+      runScript()
+      expect(win.matchMedia).toHaveBeenCalledWith('(pointer: coarse)')
+      expect(win.matchMedia).not.toHaveBeenCalledWith(expect.stringContaining('any-pointer'))
+    })
+
+    test('compensates the zoom when the primary pointer is fine', () => {
+      mockPointerMedia(false)
+      runScript()
+      setDevicePixelRatio(1.5)
+      resize()
+      expect(getFontSize()).toBe('36px')
+    })
+
+    // The regression this PR fixes
+    test('compensates the zoom on a touch-screen laptop (fine primary pointer, touch signals present)', () => {
+      mockPointerMedia(false)
+      Object.defineProperty(navigator, 'maxTouchPoints', { value: 5, configurable: true })
+      Object.defineProperty(window, 'ontouchstart', { value: null, configurable: true })
+      runScript()
+      setDevicePixelRatio(1.5)
+      resize()
+      expect(getFontSize()).toBe('36px')
+    })
+
+    test('skips the compensation when the primary pointer is coarse', () => {
+      mockPointerMedia(true)
+      runScript()
+      setDevicePixelRatio(1.5)
+      resize()
+      expect(getFontSize()).toBe('24px')
+    })
+
+    test('follows primary pointer changes after init (2-in-1 devices)', () => {
+      const pointer = mockPointerMedia(false)
+      runScript()
+      setDevicePixelRatio(1.5)
+      resize()
+      expect(getFontSize()).toBe('36px')
+
+      pointer.coarse = true
+      resize()
+      expect(getFontSize()).toBe('24px')
+    })
   })
 
-  test('skips the compensation when ontouchstart exists on window', () => {
-    Object.defineProperty(window, 'ontouchstart', { value: null, configurable: true })
-    runScript()
-    setDevicePixelRatio(1.5)
-    resize()
-    expect(getFontSize()).toBe('24px')
+  describe('when matchMedia is unavailable (legacy touch detection)', () => {
+    test('skips the compensation when the device reports touch points', () => {
+      Object.defineProperty(navigator, 'maxTouchPoints', { value: 1, configurable: true })
+      runScript()
+      setDevicePixelRatio(1.5)
+      resize()
+      expect(getFontSize()).toBe('24px')
+    })
+
+    test('skips the compensation when ontouchstart exists on window', () => {
+      Object.defineProperty(window, 'ontouchstart', { value: null, configurable: true })
+      runScript()
+      setDevicePixelRatio(1.5)
+      resize()
+      expect(getFontSize()).toBe('24px')
+    })
   })
 })
 
