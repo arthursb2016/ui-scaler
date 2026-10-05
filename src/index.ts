@@ -104,7 +104,7 @@ export default function(options?: UiScalerOptions) {
     const shouldTransformPixels = hasCustomOptions || transformPixels === true
 
     const transformPixelsOptions = hasCustomOptions
-      ? Object.assign(transformPixelsDefault, { ...transformPixels })
+      ? Object.assign({}, transformPixelsDefault, transformPixels)
       : transformPixelsDefault
 
     setTimeout(() => {
