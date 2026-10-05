@@ -27,11 +27,23 @@ export default (baseFontSize: number, enableLandscapeScaling: boolean, enablePor
         return Math.round(((width / X) + (height / Y)) / 2)
       }
 
+      const measureBrowserFontSize = function() {
+        const probe = document.createElement('div')
+        probe.style.cssText = 'position:absolute;visibility:hidden;pointer-events:none;font-family:sans-serif;font-size:medium !important'
+        try {
+          document.documentElement.appendChild(probe)
+          const size = parseFloat(window.getComputedStyle(probe).fontSize)
+          return size > 0 && isFinite(size) ? size : baseFontSize
+        } catch (error) {
+          return baseFontSize
+        } finally {
+          probe.remove()
+        }
+      }
+
       const setBrowserFontSizeDiff = function(htmlElement) {
-        htmlElement.style.removeProperty('font-size');
-        const browserFontSize = window.getComputedStyle(htmlElement).getPropertyValue('font-size');
-        const browserDifference = Number(browserFontSize.replace('px', '')) - baseFontSize;
-        document.documentElement.style.setProperty('${browserFontSizeDiffVarName}', browserDifference + 'px')
+        const browserDifference = measureBrowserFontSize() - baseFontSize
+        htmlElement.style.setProperty('${browserFontSizeDiffVarName}', browserDifference + 'px')
       }
 
       function getDesktopZoomFactor() {
@@ -60,6 +72,8 @@ export default (baseFontSize: number, enableLandscapeScaling: boolean, enablePor
           setVirtualRemFontSize(htmlElement)
         } else if (isScreenSquare) {
           setVirtualRemFontSize(htmlElement)
+        } else {
+          htmlElement.style.removeProperty('font-size')
         }
       }
 
