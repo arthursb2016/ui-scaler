@@ -3,6 +3,11 @@ import { htmlTagBaseFontSize, browserFontSizeDiffVarName } from './constants'
 export default (baseFontSize: number, enableLandscapeScaling: boolean, enablePortraitScaling: boolean) => {
   return `
     if (typeof window !== 'undefined') {
+      if (window.__uiScaler) {
+        window.removeEventListener('resize', window.__uiScaler.onResize)
+        window.cancelAnimationFrame(window.__uiScaler.rafId)
+      }
+
       const baseFontSize = ${htmlTagBaseFontSize}
       const enableLandscapeScaling = ${enableLandscapeScaling}
       const enablePortraitScaling = ${enablePortraitScaling}
@@ -58,14 +63,16 @@ export default (baseFontSize: number, enableLandscapeScaling: boolean, enablePor
       }
 
       const initHtmlFontSizeWatcher = function() {
-        let rafId = 0
-        window.addEventListener('resize', function() {
-          if (rafId) return
-          rafId = window.requestAnimationFrame(function() {
-            rafId = 0
+        const state = { rafId: 0, onResize: null }
+        state.onResize = function() {
+          if (state.rafId) return
+          state.rafId = window.requestAnimationFrame(function() {
+            state.rafId = 0
             updateHtmlFontSize()
           })
-        })
+        }
+        window.__uiScaler = state
+        window.addEventListener('resize', state.onResize)
         updateHtmlFontSize()
       }
 
