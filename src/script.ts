@@ -5,6 +5,7 @@ export default (baseFontSize: number, enableLandscapeScaling: boolean, enablePor
     if (typeof window !== 'undefined') {
       if (window.__uiScaler) {
         window.removeEventListener('resize', window.__uiScaler.onResize)
+        window.document.removeEventListener('DOMContentLoaded', window.__uiScaler.onReady)
         window.cancelAnimationFrame(window.__uiScaler.rafId)
       }
 
@@ -63,7 +64,7 @@ export default (baseFontSize: number, enableLandscapeScaling: boolean, enablePor
       }
 
       const initHtmlFontSizeWatcher = function() {
-        const state = { rafId: 0, onResize: null }
+        const state = { rafId: 0, onResize: null, onReady: updateHtmlFontSize }
         state.onResize = function() {
           if (state.rafId) return
           state.rafId = window.requestAnimationFrame(function() {
@@ -73,15 +74,12 @@ export default (baseFontSize: number, enableLandscapeScaling: boolean, enablePor
         }
         window.__uiScaler = state
         window.addEventListener('resize', state.onResize)
+        if (window.document.readyState === 'loading') {
+          window.document.addEventListener('DOMContentLoaded', state.onReady)
+        }
         updateHtmlFontSize()
       }
 
-      if (window.document.readyState !== 'loading') {
-        initHtmlFontSizeWatcher();
-      } else {
-        window.document.addEventListener('DOMContentLoaded', function() {
-          initHtmlFontSizeWatcher();
-        });
-      }
+      initHtmlFontSizeWatcher()
     }`
 }
