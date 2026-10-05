@@ -90,8 +90,15 @@ export function resolveConfig(mergedOptions: Required<UiScalerOptions>): Resolve
   const isRuntimeMode = mergedOptions.transformPixels === 'runtime'
 
   let runtimeOptions: UiScalerOptions = {}
-  if (isRuntimeMode && uiScalerOptionsAttr && isValidJsonString(uiScalerOptionsAttr)) {
-    runtimeOptions = JSON.parse(uiScalerOptionsAttr) as UiScalerOptions
+  if (isRuntimeMode && uiScalerOptionsAttr) {
+    if (isValidJsonString(uiScalerOptionsAttr)) {
+      runtimeOptions = JSON.parse(uiScalerOptionsAttr) as UiScalerOptions
+    } else {
+      console.warn(
+        'ui-scaler: the data-ui-scaler-options attribute is not valid JSON, so the default options will be used. Keys and strings need double quotes. Received:',
+        uiScalerOptionsAttr
+      )
+    }
   }
 
   const {

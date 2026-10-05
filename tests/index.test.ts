@@ -197,15 +197,68 @@ describe('resolveConfig()', () => {
     })
 
     test('falls back to the runtime defaults when the attribute is not valid JSON', () => {
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
       setRuntimeAttribute('{ not valid json')
       const config = resolve({ transformPixels: 'runtime' })
       expect(config.shouldTransformPixels).toBe(true)
       expect(config.baseFontSize).toBe(uiScalerOptionsDefault.baseFontSize)
+      warnSpy.mockRestore()
     })
 
     test('takes its settings from the attribute, not from options passed in code', () => {
       const config = resolve({ transformPixels: 'runtime', baseFontSize: 20 })
       expect(config.baseFontSize).toBe(uiScalerOptionsDefault.baseFontSize)
+    })
+  })
+
+  describe('invalid attribute warning', () => {
+    let warnSpy: jest.SpyInstance
+
+    beforeEach(() => {
+      warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
+    })
+
+    afterEach(() => {
+      warnSpy.mockRestore()
+    })
+
+    test('warns once, including the received value, when the attribute is not valid JSON', () => {
+      setRuntimeAttribute("{'baseFontSize': 20}")
+      resolve({ transformPixels: 'runtime' })
+      expect(warnSpy).toHaveBeenCalledTimes(1)
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('data-ui-scaler-options'),
+        "{'baseFontSize': 20}"
+      )
+    })
+
+    test('warns for a whitespace-only attribute', () => {
+      setRuntimeAttribute('   ')
+      resolve({ transformPixels: 'runtime' })
+      expect(warnSpy).toHaveBeenCalledTimes(1)
+    })
+
+    test('does not warn when the attribute is valid JSON', () => {
+      setRuntimeAttribute(JSON.stringify({ baseFontSize: 24 }))
+      resolve({ transformPixels: 'runtime' })
+      expect(warnSpy).not.toHaveBeenCalled()
+    })
+
+    test('does not warn when the attribute is absent', () => {
+      resolve({ transformPixels: 'runtime' })
+      expect(warnSpy).not.toHaveBeenCalled()
+    })
+
+    test('does not warn when the attribute is empty', () => {
+      setRuntimeAttribute('')
+      resolve({ transformPixels: 'runtime' })
+      expect(warnSpy).not.toHaveBeenCalled()
+    })
+
+    test('does not warn outside runtime mode, where the attribute is ignored', () => {
+      setRuntimeAttribute('{ not valid json')
+      resolve({ baseFontSize: 18 })
+      expect(warnSpy).not.toHaveBeenCalled()
     })
   })
 })
