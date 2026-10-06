@@ -37,7 +37,7 @@ export default (shouldTransformPixels: boolean, options: TransformPixelsOptions,
     }
   })
   if (transformations.size) {
-    let transformedCss = `${selector}:not(${bypassScalerTransformationClassName}) {\n`
+    let transformedCss = `${selector}:not(.${bypassScalerTransformationClassName}) {\n`
     transformations.forEach((value, key) => {
       transformedCss += `${key}: ${value};\n`
     })

@@ -1,8 +1,14 @@
 import { htmlTagBaseFontSize, browserFontSizeDiffVarName } from './constants'
 
-export default (baseFontSize: number, enableLandscapeScaling: boolean, enablePortraitScaling: boolean) => {
+export default (configBaseFontSize: number, enableLandscapeScaling: boolean, enablePortraitScaling: boolean) => {
   return `
     if (typeof window !== 'undefined') {
+      if (window.__uiScaler) {
+        window.removeEventListener('resize', window.__uiScaler.onResize)
+        window.document.removeEventListener('DOMContentLoaded', window.__uiScaler.onReady)
+        window.cancelAnimationFrame(window.__uiScaler.rafId)
+      }
+
       const baseFontSize = ${htmlTagBaseFontSize}
       const enableLandscapeScaling = ${enableLandscapeScaling}
       const enablePortraitScaling = ${enablePortraitScaling}
@@ -21,16 +27,35 @@ export default (baseFontSize: number, enableLandscapeScaling: boolean, enablePor
         return Math.round(((width / X) + (height / Y)) / 2)
       }
 
+      const measureBrowserFontSize = function() {
+        const probe = document.createElement('div')
+        probe.style.cssText = 'position:absolute;visibility:hidden;pointer-events:none;font-family:sans-serif;font-size:medium !important'
+        try {
+          document.documentElement.appendChild(probe)
+          const size = parseFloat(window.getComputedStyle(probe).fontSize)
+          return size > 0 && isFinite(size) ? size : baseFontSize
+        } catch (error) {
+          return baseFontSize
+        } finally {
+          probe.remove()
+        }
+      }
+
       const setBrowserFontSizeDiff = function(htmlElement) {
-        htmlElement.style.removeProperty('font-size');
-        const browserFontSize = window.getComputedStyle(htmlElement).getPropertyValue('font-size');
-        const browserDifference = Number(browserFontSize.replace('px', '')) - baseFontSize;
-        document.documentElement.style.setProperty('${browserFontSizeDiffVarName}', browserDifference + 'px')
+        const browserDifference = measureBrowserFontSize() - baseFontSize
+        htmlElement.style.setProperty('${browserFontSizeDiffVarName}', browserDifference + 'px')
+      }
+
+      function isTouchPrimaryDevice() {
+        const coarsePointerQuery = typeof window.matchMedia === 'function' ? window.matchMedia('(pointer: coarse)') : null
+        if (coarsePointerQuery) {
+          return coarsePointerQuery.matches
+        }
+        return ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0)
       }
 
       function getDesktopZoomFactor() {
-        const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0);
-        if (isTouchDevice) {
+        if (isTouchPrimaryDevice()) {
           return 1;
         }
         return (window.devicePixelRatio || 1) / BASELINE_DPR
@@ -38,7 +63,7 @@ export default (baseFontSize: number, enableLandscapeScaling: boolean, enablePor
 
       const setVirtualRemFontSize = function(htmlElement) {
         const vRemFull = getVirtualRemFontSize(window.innerWidth, window.innerHeight)
-        const vRemAdjusted = (vRemFull * getDesktopZoomFactor()) + (${baseFontSize} - ${htmlTagBaseFontSize})
+        const vRemAdjusted = (vRemFull * getDesktopZoomFactor()) + (${configBaseFontSize} - ${htmlTagBaseFontSize})
         htmlElement.style.setProperty('font-size', vRemAdjusted + 'px')
       }
 
@@ -54,20 +79,28 @@ export default (baseFontSize: number, enableLandscapeScaling: boolean, enablePor
           setVirtualRemFontSize(htmlElement)
         } else if (isScreenSquare) {
           setVirtualRemFontSize(htmlElement)
+        } else {
+          htmlElement.style.removeProperty('font-size')
         }
       }
 
       const initHtmlFontSizeWatcher = function() {
-        window.addEventListener('resize', updateHtmlFontSize)
+        const state = { rafId: 0, onResize: null, onReady: updateHtmlFontSize }
+        state.onResize = function() {
+          if (state.rafId) return
+          state.rafId = window.requestAnimationFrame(function() {
+            state.rafId = 0
+            updateHtmlFontSize()
+          })
+        }
+        window.__uiScaler = state
+        window.addEventListener('resize', state.onResize)
+        if (window.document.readyState === 'loading') {
+          window.document.addEventListener('DOMContentLoaded', state.onReady)
+        }
         updateHtmlFontSize()
       }
 
-      if (window.document.readyState !== 'loading') {
-        initHtmlFontSizeWatcher();
-      } else {
-        window.document.addEventListener('DOMContentLoaded', function() {
-          initHtmlFontSizeWatcher();
-        });
-      }
+      initHtmlFontSizeWatcher()
     }`
 }
