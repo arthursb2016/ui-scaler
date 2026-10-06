@@ -60,7 +60,7 @@ describe('transformCss()', () => {
       styleMap: new Map([['margin-top', unitEntry(16, 'px')]])
     })
     const transformation = transformCss(true, transformPixelsDefault, mockRule)
-    expect(transformation).toBe(`.mt-4:not(${bypassScalerTransformationClassName}) {\nmargin-top: 1rem;\n}`)
+    expect(transformation).toBe(`.mt-4:not(.${bypassScalerTransformationClassName}) {\nmargin-top: 1rem;\n}`)
   })
 
   test('does not transform px properties when shouldTransformPixels is false', () => {
@@ -110,7 +110,7 @@ describe('transformCss()', () => {
       ])
     })
     const transformation = transformCss(true, transformPixelsDefault, mockRule)
-    expect(transformation).toBe(`.p-4:not(${bypassScalerTransformationClassName}) {\npadding-top: 1rem;\npadding-bottom: 2rem;\n}`)
+    expect(transformation).toBe(`.p-4:not(.${bypassScalerTransformationClassName}) {\npadding-top: 1rem;\npadding-bottom: 2rem;\n}`)
   })
 
   test('wraps a px font-size in calc() with the browser font-size diff variable', () => {
@@ -119,7 +119,7 @@ describe('transformCss()', () => {
       rawStyles: { 'font-size': '16px' }
     })
     const transformation = transformCss(false, transformPixelsDefault, mockRule)
-    expect(transformation).toBe(`.text-base:not(${bypassScalerTransformationClassName}) {\nfont-size: calc(1rem + var(${browserFontSizeDiffVarName}));\n}`)
+    expect(transformation).toBe(`.text-base:not(.${bypassScalerTransformationClassName}) {\nfont-size: calc(1rem + var(${browserFontSizeDiffVarName}));\n}`)
   })
 
   test('wraps a non-px font-size (e.g. rem) in calc() without converting its unit', () => {
@@ -128,7 +128,7 @@ describe('transformCss()', () => {
       rawStyles: { 'font-size': '1.5rem' }
     })
     const transformation = transformCss(false, transformPixelsDefault, mockRule)
-    expect(transformation).toBe(`.text-base:not(${bypassScalerTransformationClassName}) {\nfont-size: calc(1.5rem + var(${browserFontSizeDiffVarName}));\n}`)
+    expect(transformation).toBe(`.text-base:not(.${bypassScalerTransformationClassName}) {\nfont-size: calc(1.5rem + var(${browserFontSizeDiffVarName}));\n}`)
   })
 
   test('wraps a font-size referencing a CSS custom property (e.g. TailwindCSS var()) in calc()', () => {
@@ -137,7 +137,7 @@ describe('transformCss()', () => {
       rawStyles: { 'font-size': 'var(--text-sm)' }
     })
     const transformation = transformCss(false, transformPixelsDefault, mockRule)
-    expect(transformation).toBe(`.text-sm:not(${bypassScalerTransformationClassName}) {\nfont-size: calc(var(--text-sm) + var(${browserFontSizeDiffVarName}));\n}`)
+    expect(transformation).toBe(`.text-sm:not(.${bypassScalerTransformationClassName}) {\nfont-size: calc(var(--text-sm) + var(${browserFontSizeDiffVarName}));\n}`)
   })
 
   test('applies font-size transformation regardless of shouldTransformPixels', () => {
@@ -146,7 +146,7 @@ describe('transformCss()', () => {
       rawStyles: { 'font-size': '16px' }
     })
     const transformation = transformCss(true, transformPixelsDefault, mockRule)
-    expect(transformation).toBe(`.text-base:not(${bypassScalerTransformationClassName}) {\nfont-size: calc(1rem + var(${browserFontSizeDiffVarName}));\n}`)
+    expect(transformation).toBe(`.text-base:not(.${bypassScalerTransformationClassName}) {\nfont-size: calc(1rem + var(${browserFontSizeDiffVarName}));\n}`)
   })
 
   test('combines font-size with other pixel transformations in the same rule', () => {
@@ -156,7 +156,7 @@ describe('transformCss()', () => {
       styleMap: new Map([['padding', unitEntry(16, 'px')]])
     })
     const transformation = transformCss(true, transformPixelsDefault, mockRule)
-    expect(transformation).toBe(`.card:not(${bypassScalerTransformationClassName}) {\nfont-size: calc(1rem + var(${browserFontSizeDiffVarName}));\npadding: 1rem;\n}`)
+    expect(transformation).toBe(`.card:not(.${bypassScalerTransformationClassName}) {\nfont-size: calc(1rem + var(${browserFontSizeDiffVarName}));\npadding: 1rem;\n}`)
   })
 
   test('does not throw and skips font-size handling when the rule has no style declaration', () => {
@@ -165,6 +165,6 @@ describe('transformCss()', () => {
       styleMap: new Map([['padding', unitEntry(16, 'px')]])
     } as unknown as CSSStyleRule
     const transformation = transformCss(true, transformPixelsDefault, mockRule)
-    expect(transformation).toBe(`.p-2:not(${bypassScalerTransformationClassName}) {\npadding: 1rem;\n}`)
+    expect(transformation).toBe(`.p-2:not(.${bypassScalerTransformationClassName}) {\npadding: 1rem;\n}`)
   })
 })
