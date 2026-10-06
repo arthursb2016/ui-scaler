@@ -1,6 +1,6 @@
 import { htmlTagBaseFontSize, browserFontSizeDiffVarName } from './constants'
 
-export default (baseFontSize: number, enableLandscapeScaling: boolean, enablePortraitScaling: boolean) => {
+export default (configBaseFontSize: number, enableLandscapeScaling: boolean, enablePortraitScaling: boolean) => {
   return `
     if (typeof window !== 'undefined') {
       if (window.__uiScaler) {
@@ -15,7 +15,6 @@ export default (baseFontSize: number, enableLandscapeScaling: boolean, enablePor
       const segments = { width: 80, height: 45 }
       const preciseBreakpoints = { width: 1320, height: 720 }
       const BASELINE_DPR = window.devicePixelRatio || 1
-      const coarsePointerQuery = typeof window.matchMedia === 'function' ? window.matchMedia('(pointer: coarse)') : null
 
       function getVirtualRemFontSize(width, height) {
         const isLandscape = width > height
@@ -48,6 +47,7 @@ export default (baseFontSize: number, enableLandscapeScaling: boolean, enablePor
       }
 
       function isTouchPrimaryDevice() {
+        const coarsePointerQuery = typeof window.matchMedia === 'function' ? window.matchMedia('(pointer: coarse)') : null
         if (coarsePointerQuery) {
           return coarsePointerQuery.matches
         }
@@ -63,7 +63,7 @@ export default (baseFontSize: number, enableLandscapeScaling: boolean, enablePor
 
       const setVirtualRemFontSize = function(htmlElement) {
         const vRemFull = getVirtualRemFontSize(window.innerWidth, window.innerHeight)
-        const vRemAdjusted = (vRemFull * getDesktopZoomFactor()) + (${baseFontSize} - ${htmlTagBaseFontSize})
+        const vRemAdjusted = (vRemFull * getDesktopZoomFactor()) + (${configBaseFontSize} - ${htmlTagBaseFontSize})
         htmlElement.style.setProperty('font-size', vRemAdjusted + 'px')
       }
 
