@@ -112,7 +112,7 @@ export function resolveConfig(mergedOptions: Required<UiScalerOptions>): Resolve
   const shouldTransformPixels = hasCustomOptions || transformPixels === true
 
   const transformPixelsOptions = hasCustomOptions
-    ? Object.assign({}, transformPixelsDefault, transformPixels) // Hunk A
+    ? Object.assign({}, transformPixelsDefault, transformPixels)
     : transformPixelsDefault
 
   return { shouldTransformPixels, transformPixelsOptions, baseFontSize, enableLandscapeScaling, enablePortraitScaling }
