@@ -5,6 +5,8 @@ const html = document.documentElement
 const win = window as any
 const originalDevicePixelRatio = window.devicePixelRatio
 
+type MockQuery = { media: string; listeners: EventListener[]; addListener: jest.Mock }
+
 let frames: Map<number, FrameRequestCallback>
 let nextFrameId: number
 let computedStyleSpy: jest.SpyInstance
@@ -43,14 +45,39 @@ const simulateNonTouchBrowser = () => {
   }
 }
 
-// jsdom has no matchMedia. Returns a mutable state so tests can flip the primary pointer,
-// and the mock reads it live, like a real MediaQueryList
+// jsdom has no matchMedia. The mock reads `coarse` live, like a real MediaQueryList, reports
+// resolution queries as supported, and records their listeners so tests can fire a pixel ratio
+// change with fireResolutionChange()
 const mockPointerMedia = (coarse: boolean) => {
-  const state = { coarse }
-  win.matchMedia = jest.fn((query: string) => ({
-    get matches() { return query === '(pointer: coarse)' && state.coarse },
-    media: query
-  }))
+  const state = {
+    coarse,
+    queries: [] as MockQuery[],
+    // Fires, and drops, the listeners of the latest resolution query, like a real
+    // { once: true } subscription. A no-op when nothing is subscribed
+    fireResolutionChange() {
+      const query = state.queries.slice().reverse()
+        .find(item => item.media.includes('resolution') && item.listeners.length > 0)
+      const listeners = query ? query.listeners.splice(0) : []
+      listeners.forEach(listener => listener(new Event('change')))
+    }
+  }
+
+  win.matchMedia = jest.fn((media: string) => {
+    const query: MockQuery = {
+      media,
+      listeners: [],
+      addListener: jest.fn((_type: string, listener: EventListener) => { query.listeners.push(listener) })
+    }
+    state.queries.push(query)
+    return {
+      media,
+      get matches() { return media === '(pointer: coarse)' ? state.coarse : media.includes('resolution') },
+      addEventListener: query.addListener,
+      removeEventListener: jest.fn((_type: string, listener: EventListener) => {
+        query.listeners = query.listeners.filter(item => item !== listener)
+      })
+    }
+  })
   return state
 }
 
@@ -97,6 +124,9 @@ afterEach(() => {
   if (win.__uiScaler) {
     window.removeEventListener('resize', win.__uiScaler.onResize)
     document.removeEventListener('DOMContentLoaded', win.__uiScaler.onReady)
+    if (win.__uiScaler.dprQuery) {
+      win.__uiScaler.dprQuery.removeEventListener('change', win.__uiScaler.onDprChange)
+    }
     delete win.__uiScaler
   }
   delete win.navigator.maxTouchPoints
@@ -318,6 +348,205 @@ describe('zoom compensation', () => {
       setDevicePixelRatio(1.5)
       resize()
       expect(getFontSize()).toBe('24px')
+    })
+  })
+})
+
+describe('device pixel ratio changes', () => {
+  describe('subscription', () => {
+    test('watches a range around the current pixel ratio', () => {
+      mockPointerMedia(false)
+      runScript()
+      expect(win.matchMedia).toHaveBeenCalledWith('(min-resolution: 0.999dppx) and (max-resolution: 1.001dppx)')
+    })
+
+    test('subscribes with { once: true } and keeps the query on the instance state', () => {
+      const media = mockPointerMedia(false)
+      runScript()
+      const query = media.queries.find(item => item.media.includes('resolution'))!
+      expect(query.addListener).toHaveBeenCalledWith('change', win.__uiScaler.onDprChange, { once: true })
+      expect(win.__uiScaler.dprQuery).not.toBeNull()
+    })
+
+    test('watches the new ratio after a change (re-arms)', () => {
+      const media = mockPointerMedia(false)
+      runScript()
+      setDevicePixelRatio(2)
+      media.fireResolutionChange()
+      expect(win.matchMedia).toHaveBeenCalledWith('(min-resolution: 1.999dppx) and (max-resolution: 2.001dppx)')
+    })
+
+    test('removes the previous instance listener when the script runs again', () => {
+      const media = mockPointerMedia(false)
+      runScript()
+      const first = win.__uiScaler
+      const query = media.queries.find(item => item.media.includes('resolution'))!
+      expect(query.listeners).toContain(first.onDprChange)
+
+      runScript()
+      expect(query.listeners).not.toContain(first.onDprChange)
+    })
+
+    test('does not subscribe, and does not throw, when matchMedia is unavailable', () => {
+      expect(() => runScript()).not.toThrow()
+      expect(win.__uiScaler.dprQuery).toBeNull()
+      expect(getFontSize()).toBe('24px')
+    })
+
+    test('does not subscribe when the resolution query is not supported', () => {
+      const addListener = jest.fn()
+      win.matchMedia = jest.fn((media: string) => ({ media, matches: false, addEventListener: addListener }))
+      expect(() => runScript()).not.toThrow()
+      expect(addListener).not.toHaveBeenCalled()
+      expect(win.__uiScaler.dprQuery).toBeNull()
+      expect(getFontSize()).toBe('24px')
+    })
+
+    test('does not throw when the media query list has no addEventListener', () => {
+      win.matchMedia = jest.fn(() => ({ matches: true }))
+      expect(() => runScript()).not.toThrow()
+      expect(win.__uiScaler.dprQuery).toBeNull()
+      expect(getFontSize()).toBe('24px')
+    })
+  })
+
+  // Zoom keeps the physical window size (CSS px * ratio) constant, so the baseline must stay put
+  describe('zoom (the physical window size is preserved)', () => {
+    test('does not re-base when nothing changed', () => {
+      const media = mockPointerMedia(false)
+      runScript()
+      media.fireResolutionChange()
+      resize()
+      expect(getFontSize()).toBe('24px')
+    })
+
+    test('keeps compensating zoom to 200%', () => {
+      const media = mockPointerMedia(false)
+      runScript()
+      setViewport(960, 540)
+      setDevicePixelRatio(2)
+      media.fireResolutionChange()
+      resize()
+      expect(getFontSize()).toBe('28px') // the curve gives 14 here, times a factor of 2
+    })
+
+    // 1097x617 at a ratio of 1.75 is 1919.75x1079.75 device px: rounding shifts the physical size
+    test('keeps compensating zoom at a fractional level, where rounding shifts the physical size', () => {
+      const media = mockPointerMedia(false)
+      runScript()
+      setViewport(1097, 617)
+      setDevicePixelRatio(1.75)
+      media.fireResolutionChange()
+      resize()
+      expect(getFontSize()).toBe('26.25px') // the curve gives 15; re-based wrongly it would be 15px
+    })
+
+    // At a ratio of 2 the tolerance is 6 device px
+    test.each([
+      ['inside the tolerance (4 device px off)', 962, '28px'],
+      ['outside the tolerance (8 device px off)', 964, '14px']
+    ])('treats a window %s correctly', (_label, width, expected) => {
+      const media = mockPointerMedia(false)
+      runScript()
+      setViewport(width, 540)
+      setDevicePixelRatio(2)
+      media.fireResolutionChange()
+      resize()
+      expect(getFontSize()).toBe(expected)
+    })
+  })
+
+  // A ratio change that alters the physical window size is not zoom: the baseline must move
+  describe('monitor or device changes (the physical window size differs)', () => {
+    // Without the re-base, the next resize would apply a factor of 2 (48px)
+    test('does not jump after a ratio change that keeps the CSS viewport', () => {
+      const media = mockPointerMedia(false)
+      runScript()
+      setDevicePixelRatio(2)
+      media.fireResolutionChange()
+      resize()
+      expect(getFontSize()).toBe('24px')
+    })
+
+    // Without the re-base: 32px
+    test('re-bases when the window is also resized by the move', () => {
+      const media = mockPointerMedia(false)
+      runScript()
+      setViewport(1280, 720)
+      setDevicePixelRatio(2)
+      media.fireResolutionChange()
+      resize()
+      expect(getFontSize()).toBe('16px')
+    })
+
+    // Without the re-base the second step gives 42px
+    test('keeps an existing zoom factor across a later monitor change', () => {
+      const media = mockPointerMedia(false)
+      runScript()
+
+      setViewport(960, 540) // zoom to 200%
+      setDevicePixelRatio(2)
+      media.fireResolutionChange()
+      resize()
+      expect(getFontSize()).toBe('28px')
+
+      setDevicePixelRatio(3) // monitor change, same CSS viewport
+      media.fireResolutionChange()
+      resize()
+      expect(getFontSize()).toBe('28px')
+    })
+
+    // Without the re-base the last step gives 48px
+    test('re-bases even when scaling is disabled for the current orientation', () => {
+      const media = mockPointerMedia(false)
+      runScript(htmlTagBaseFontSize, false, true) // landscape scaling off
+      expect(getFontSize()).toBe('')
+
+      setDevicePixelRatio(2)
+      media.fireResolutionChange()
+      resize()
+      expect(getFontSize()).toBe('')
+
+      setViewport(1080, 1920) // portrait: scaled
+      resize()
+      expect(getFontSize()).toBe('24px')
+    })
+
+    // DevTools device switch without a reload
+    test('follows a switch from a desktop to a touch device and back', () => {
+      const media = mockPointerMedia(false)
+      runScript() // desktop: 1920x1080 at a ratio of 1
+      expect(getFontSize()).toBe('24px')
+
+      setViewport(1180, 820) // tablet
+      setDevicePixelRatio(2)
+      media.coarse = true
+      media.fireResolutionChange()
+      resize()
+      expect(getFontSize()).toBe('17px')
+
+      setViewport(1920, 1080) // back to the desktop
+      setDevicePixelRatio(1)
+      media.coarse = false
+      media.fireResolutionChange()
+      resize()
+      expect(getFontSize()).toBe('24px')
+    })
+
+    // The case that halved the font-size before: the baseline was captured on the tablet
+    test('follows a switch from a touch device loaded first to a desktop', () => {
+      setViewport(1180, 820)
+      setDevicePixelRatio(2)
+      const media = mockPointerMedia(true)
+      runScript() // loaded as a tablet: the baseline ratio is 2
+      expect(getFontSize()).toBe('17px')
+
+      setViewport(1920, 1080)
+      setDevicePixelRatio(1)
+      media.coarse = false
+      media.fireResolutionChange()
+      resize()
+      expect(getFontSize()).toBe('24px') // without the re-base: 12px (a factor of 1/2)
     })
   })
 })

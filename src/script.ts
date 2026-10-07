@@ -5,6 +5,9 @@ export default (configBaseFontSize: number, enableLandscapeScaling: boolean, ena
     if (typeof window !== 'undefined') {
       if (window.__uiScaler) {
         window.removeEventListener('resize', window.__uiScaler.onResize)
+        if (window.__uiScaler.dprQuery) {
+          window.__uiScaler.dprQuery.removeEventListener('change', window.__uiScaler.onDprChange)
+        }
         window.document.removeEventListener('DOMContentLoaded', window.__uiScaler.onReady)
         window.cancelAnimationFrame(window.__uiScaler.rafId)
       }
@@ -14,7 +17,13 @@ export default (configBaseFontSize: number, enableLandscapeScaling: boolean, ena
       const enablePortraitScaling = ${enablePortraitScaling}
       const segments = { width: 80, height: 45 }
       const preciseBreakpoints = { width: 1320, height: 720 }
-      const BASELINE_DPR = window.devicePixelRatio || 1
+      // Zoom factor = current pixel ratio / baselineDpr.
+      // Re-based when the ratio changes without zoom (window moved to another monitor)
+      let baselineDpr = window.devicePixelRatio || 1
+      // What the last update saw, to tell zoom from a monitor change
+      let lastWidth = window.innerWidth
+      let lastHeight = window.innerHeight
+      let lastDpr = baselineDpr
 
       function getVirtualRemFontSize(width, height) {
         const isLandscape = width > height
@@ -58,7 +67,7 @@ export default (configBaseFontSize: number, enableLandscapeScaling: boolean, ena
         if (isTouchPrimaryDevice()) {
           return 1;
         }
-        return (window.devicePixelRatio || 1) / BASELINE_DPR
+        return (window.devicePixelRatio || 1) / baselineDpr
       }
 
       const setVirtualRemFontSize = function(htmlElement) {
@@ -69,6 +78,9 @@ export default (configBaseFontSize: number, enableLandscapeScaling: boolean, ena
 
       const updateHtmlFontSize = function() {
         const htmlElement = document.querySelector('html');
+        lastWidth = window.innerWidth
+        lastHeight = window.innerHeight
+        lastDpr = window.devicePixelRatio || 1
         setBrowserFontSizeDiff(htmlElement)
         const isScreenLandscape = window.innerWidth > window.innerHeight
         const isScreenPortrait = window.innerHeight > window.innerWidth
@@ -85,7 +97,8 @@ export default (configBaseFontSize: number, enableLandscapeScaling: boolean, ena
       }
 
       const initHtmlFontSizeWatcher = function() {
-        const state = { rafId: 0, onResize: null, onReady: updateHtmlFontSize }
+        const state = { rafId: 0, onResize: null, onReady: updateHtmlFontSize, dprQuery: null, onDprChange: null }
+
         state.onResize = function() {
           if (state.rafId) return
           state.rafId = window.requestAnimationFrame(function() {
@@ -93,8 +106,42 @@ export default (configBaseFontSize: number, enableLandscapeScaling: boolean, ena
             updateHtmlFontSize()
           })
         }
+
         window.__uiScaler = state
         window.addEventListener('resize', state.onResize)
+
+        state.onDprChange = function() {
+          watchDevicePixelRatio() // re-arm for the new ratio first
+          const dpr = window.devicePixelRatio || 1
+          // Zoom keeps the physical window size (CSS px * ratio) constant, within rounding.
+          // A monitor change that alters the physical size does not
+          const tolerance = 2 + 2 * dpr
+          const looksLikeZoom =
+            Math.abs(window.innerWidth * dpr - lastWidth * lastDpr) <= tolerance &&
+            Math.abs(window.innerHeight * dpr - lastHeight * lastDpr) <= tolerance
+          if (looksLikeZoom) {
+            return // the pending update applies the zoom factor
+          }
+          // Not zoom: re-base so the factor already applied stays the same and the next
+          // resize does not jump: newDpr / newBaseline = lastDpr / oldBaseline
+          baselineDpr = (dpr * baselineDpr) / lastDpr
+          lastDpr = dpr
+        }
+
+        const watchDevicePixelRatio = function() {
+          if (typeof window.matchMedia !== 'function') return
+          const dpr = window.devicePixelRatio || 1
+          // A range, not an exact value: fractional ratios (such as at 110% zoom) are floats
+          const query = window.matchMedia(
+            '(min-resolution: ' + (dpr - 0.001).toFixed(3) + 'dppx) and (max-resolution: ' + (dpr + 0.001).toFixed(3) + 'dppx)'
+          )
+          if (!query.matches || typeof query.addEventListener !== 'function') return
+          state.dprQuery = query
+          query.addEventListener('change', state.onDprChange, { once: true })
+        }
+
+        watchDevicePixelRatio()
+
         if (window.document.readyState === 'loading') {
           window.document.addEventListener('DOMContentLoaded', state.onReady)
         }
