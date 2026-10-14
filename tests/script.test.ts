@@ -155,14 +155,23 @@ describe('font-size scaling curve', () => {
     expect(getFontSize()).toBe(`${expected}px`)
   })
 
-  test('adds the offset between the baseFontSize option and the internal base size', () => {
-    runScript(htmlTagBaseFontSize + 4)
-    expect(getFontSize()).toBe('28px')
+  test('scales proportionally to the baseFontSize option', () => {
+    runScript(htmlTagBaseFontSize + 4) // 24 * 20 / 16
+    expect(getFontSize()).toBe('30px')
   })
 
-  test('supports a negative offset', () => {
-    runScript(htmlTagBaseFontSize - 2)
-    expect(getFontSize()).toBe('22px')
+  test('supports a baseFontSize below the internal base size', () => {
+    runScript(htmlTagBaseFontSize - 2) // 24 * 14 / 16
+    expect(getFontSize()).toBe('21px')
+  })
+
+  test.each([
+    ['1280x720', 1280, 720, 13],
+    ['2560x1440', 2560, 1440, 26]
+  ])('keeps the baseFontSize proportion at %s', (_label, width, height, expected) => {
+    setViewport(width, height)
+    runScript(13)
+    expect(getFontSize()).toBe(`${expected}px`)
   })
 
   test('applies the size synchronously on the first run', () => {

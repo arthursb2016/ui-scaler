@@ -36,6 +36,12 @@ export default (configBaseFontSize: number, enableLandscapeScaling: boolean, ena
         return Math.round(((width / X) + (height / Y)) / 2)
       }
 
+      function getVirtualBaseFontSizeParamAdjustment() {
+        const configured = ${configBaseFontSize}
+        if (!(configured > 0) || !isFinite(configured)) return 1
+        return configured / baseFontSize
+      }
+
       const measureBrowserFontSize = function() {
         const probe = document.createElement('div')
         probe.style.cssText = 'position:absolute;visibility:hidden;pointer-events:none;font-family:sans-serif;font-size:medium !important'
@@ -72,7 +78,7 @@ export default (configBaseFontSize: number, enableLandscapeScaling: boolean, ena
 
       const setVirtualRemFontSize = function(htmlElement) {
         const vRemFull = getVirtualRemFontSize(window.innerWidth, window.innerHeight)
-        const vRemAdjusted = (vRemFull * getDesktopZoomFactor()) + (${configBaseFontSize} - ${htmlTagBaseFontSize})
+        const vRemAdjusted = vRemFull * getDesktopZoomFactor() * getVirtualBaseFontSizeParamAdjustment()
         htmlElement.style.setProperty('font-size', vRemAdjusted + 'px')
       }
 
