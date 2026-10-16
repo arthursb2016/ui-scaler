@@ -36,7 +36,7 @@ export default (configBaseFontSize: number, enableLandscapeScaling: boolean, ena
         return Math.round(((width / X) + (height / Y)) / 2)
       }
 
-      function getVirtualBaseFontSizeParamAdjustment() {
+      function getVirtualBaseFontSizeParamFactor() {
         const configured = ${configBaseFontSize}
         if (!(configured > 0) || !isFinite(configured)) return 1
         return configured / baseFontSize
@@ -78,7 +78,7 @@ export default (configBaseFontSize: number, enableLandscapeScaling: boolean, ena
 
       const setVirtualRemFontSize = function(htmlElement) {
         const vRemFull = getVirtualRemFontSize(window.innerWidth, window.innerHeight)
-        const vRemAdjusted = vRemFull * getDesktopZoomFactor() * getVirtualBaseFontSizeParamAdjustment()
+        const vRemAdjusted = vRemFull * getDesktopZoomFactor() * getVirtualBaseFontSizeParamFactor()
         htmlElement.style.setProperty('font-size', vRemAdjusted + 'px')
       }
 
