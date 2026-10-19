@@ -171,6 +171,36 @@ import scaleUI from 'ui-scaler'
 scaleUI({ enablePortraitScaling: false })
 ```
 
+## Server-side rendering (SSR)
+
+`scaleUI()` is a no-op when there is no `window`/`document`, so it is safe to import in SSR apps.
+
+The server does not know the user's screen resolution, so the scale is always calculated in the browser. To avoid a visible jump on first paint (the page rendering at the default font-size and then rescaling after JS loads), render the scaler script inline in your `<head>`. The browser runs it while parsing the HTML, before painting the body.
+
+```JavaScript
+import { getScalerScript } from 'ui-scaler'
+
+// Same options as scaleUI: baseFontSize, enableLandscapeScaling, enablePortraitScaling
+const script = getScalerScript({ baseFontSize: 16 })
+```
+
+Next.js example (root layout):
+
+```JSX
+<html lang="en" suppressHydrationWarning>
+  <head>
+    <script dangerouslySetInnerHTML={{ __html: getScalerScript() }} />
+  </head>
+  ...
+</html>
+```
+
+Notes:
+- Pixel transformation (`transformPixels`) is not recommended in SSR apps. It runs on the client after load, so the transformed styles are applied late and can cause visual flicker. Use `rem` units in your styles instead, and rely on `getScalerScript()` only.
+- Calling `scaleUI()` on the client is not needed when using `getScalerScript()`.
+- `suppressHydrationWarning` is needed on `<html>` in React, since the script adds a `style` attribute to it.
+- If you use a CSP, add your nonce to the inline `<script>` tag.
+
 ## HTML options binding
 
 In case you are using the `<script src="..."></script>` installation method, and you want to pass any customization options to the script, add a single `data-ui-scaler-options` attribute to your html element, containing a stringified JSON object with any of the `UiScalerOptions` fields (see [Parameters](#parameters-optional) above).

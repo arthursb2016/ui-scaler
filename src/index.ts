@@ -136,6 +136,12 @@ function transformStyles(config: ResolvedConfig) {
   })
 }
 
+// SSR helper. Returns the html font-size script as a string, to be rendered inline in the server <head>,
+export function getScalerScript(options?: Pick<UiScalerOptions, 'baseFontSize' | 'enableLandscapeScaling' | 'enablePortraitScaling'>): string {
+  const { baseFontSize, enableLandscapeScaling, enablePortraitScaling } = mergeUiScalerOptions(uiScalerOptionsDefault, options)
+  return scalerScript(baseFontSize, enableLandscapeScaling, enablePortraitScaling)
+}
+
 // Library entry point. Initializes UI scaling with provided options
 export default function(options?: UiScalerOptions) {
   if (typeof window === 'undefined' || typeof document === 'undefined') return
