@@ -138,6 +138,8 @@ function transformStyles(config: ResolvedConfig) {
 
 // Library entry point. Initializes UI scaling with provided options
 export default function(options?: UiScalerOptions) {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return
+
   const mergedOptions = mergeUiScalerOptions(uiScalerOptionsDefault, options)
   const config = resolveConfig(mergedOptions)
 
