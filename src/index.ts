@@ -1,77 +1,11 @@
 import { isValidJsonString } from './utils'
-import transformCss from './transformCss'
-import { TransformPixelsOptions, UiScalerOptions, ResolvedConfig } from './types'
+import { UiScalerOptions, ResolvedConfig } from './types'
 import { transformPixelsDefault, uiScalerOptionsDefault } from './options'
 
 import scalerScript from './script'
+import transformCssScript from './transformCssScript'
 
 const runtimeOptionsDefault: Required<UiScalerOptions> = { ...uiScalerOptionsDefault, transformPixels: true }
-
-// Parses the CSS rules from a CSSRuleList and returns an array of CSSStyleRule objects, including those nested within grouping rules (e.g., @media, @supports, @layer, etc.)
-export function collectStyleRules(cssRules: CSSRuleList): CSSStyleRule[] {
-  const styleRules: CSSStyleRule[] = []
-  Array.from(cssRules).forEach((rule) => {
-    if (rule instanceof CSSStyleRule) {
-      styleRules.push(rule)
-    } else if ('cssRules' in rule) {
-      // Recurse into grouping rules such as @layer, @media, @supports, @container, etc.,
-      // since TailwindCSS wraps its utility classes (e.g. font-size) inside @layer blocks
-      styleRules.push(...collectStyleRules((rule as CSSGroupingRule).cssRules))
-    }
-  })
-  return styleRules
-}
-
-// Transforms font-size styles to calc the browser font-size difference, plus optianlly transforms other pixel-based styles to rems, based on the provided options
-function transformExistingStyles(shouldTransformPixels: boolean, options: TransformPixelsOptions) {
-  let transformations = ''
-  Array.from(document.styleSheets).forEach((styleSheet: CSSStyleSheet) => {
-    try {
-      const cssRules = styleSheet.cssRules
-      collectStyleRules(cssRules).forEach((rule) => {
-        const transformedRules = transformCss(shouldTransformPixels, options, rule)
-        if (transformedRules) transformations += '\n' + transformedRules
-      })
-    } catch (error) {
-      console.warn('ui-scaler: Could not access a stylesheet rule. This might or might not affect your page responsiveness', error, styleSheet)
-    }
-  })
-  const style = document.createElement('style')
-  style.setAttribute('type', 'text/css')
-  style.setAttribute('data-ui-scaler-transformations', 'true')
-  style.textContent = transformations.replace(/\n/g, '')
-  document.head.appendChild(style)
-}
-
-// Observes the document head for newly added <style> elements to perform the same transformations as "transformExistingStyles"
-function observeNewlyAddedStyles(shouldTransformPixels: boolean, options: TransformPixelsOptions) {
-  const cssObserver = new MutationObserver((mutations) => {
-    for (const mutation of mutations) {
-      if (mutation.type === 'childList') {
-        mutation.addedNodes.forEach((node) => {
-          if (node.nodeType === Node.ELEMENT_NODE && (node as HTMLElement).tagName.toLowerCase() === 'style') {
-            const styleEl = node as HTMLStyleElement
-            if (styleEl.sheet) {
-              let transformations = ''
-              collectStyleRules(styleEl.sheet.cssRules).forEach((rule) => {
-                const transformedRules = transformCss(shouldTransformPixels, options, rule)
-                if (transformedRules) transformations += '\n' + transformedRules
-              });
-              if (transformations) {
-                const css = styleEl.textContent ?? ''
-                styleEl.textContent = css + transformations
-              }
-            }
-          }
-        })
-      }
-    }
-  })
-  cssObserver.observe(document.head, {
-    childList: true,
-    subtree: true,
-  })
-}
 
 // Merges the default options with the user-provided options, giving precedence to the user-provided values
 export function mergeUiScalerOptions(defaults: Required<UiScalerOptions>, overrides?: UiScalerOptions): Required<UiScalerOptions> {
@@ -118,28 +52,31 @@ export function resolveConfig(mergedOptions: Required<UiScalerOptions>): Resolve
   return { shouldTransformPixels, transformPixelsOptions, baseFontSize, enableLandscapeScaling, enablePortraitScaling }
 }
 
-// Injects the html font-size watcher script
-function injectFontSizeWatcher(config: ResolvedConfig) {
-  const script = scalerScript(config.baseFontSize, config.enableLandscapeScaling, config.enablePortraitScaling)
+// Appends an inline script tag to the document
+function injectScript(attributeName: string, script: string) {
   const scriptTag = document.createElement('script')
-  scriptTag.setAttribute('data-ui-scaler-html-font-size-watcher', 'true')
+  scriptTag.setAttribute(attributeName, 'true')
   scriptTag.textContent = script
   const parent = document.head || document.documentElement
   parent.appendChild(scriptTag)
 }
 
-// Executes the style transformation scripts (existing and newly added styles)
-function transformStyles(config: ResolvedConfig) {
-  setTimeout(() => {
-    transformExistingStyles(config.shouldTransformPixels, config.transformPixelsOptions)
-    observeNewlyAddedStyles(config.shouldTransformPixels, config.transformPixelsOptions)
-  })
+// Injects the html font-size watcher script
+function injectFontSizeWatcher(config: ResolvedConfig) {
+  injectScript('data-ui-scaler-html-font-size-watcher', scalerScript(config.baseFontSize, config.enableLandscapeScaling, config.enablePortraitScaling))
 }
 
-// SSR helper. Returns the html font-size script as a string, to be rendered inline in the server <head>,
-export function getScalerScript(options?: Pick<UiScalerOptions, 'baseFontSize' | 'enableLandscapeScaling' | 'enablePortraitScaling'>): string {
+// Injects the css transformations script (existing and newly added styles)
+function injectCssTransformations(config: ResolvedConfig) {
+  injectScript('data-ui-scaler-css-transformations', transformCssScript(config.shouldTransformPixels, config.transformPixelsOptions))
+}
+
+// SSR helper: returns the whole ui-scaler setup as a script string, to be rendered inline in the server <head>
+export function getSsrScript(options?: Pick<UiScalerOptions, 'baseFontSize' | 'enableLandscapeScaling' | 'enablePortraitScaling'>): string {
   const { baseFontSize, enableLandscapeScaling, enablePortraitScaling } = mergeUiScalerOptions(uiScalerOptionsDefault, options)
-  return scalerScript(baseFontSize, enableLandscapeScaling, enablePortraitScaling)
+  const fontSizeWatcher = scalerScript(baseFontSize, enableLandscapeScaling, enablePortraitScaling)
+  const cssTransformations = transformCssScript(false, transformPixelsDefault)
+  return `${fontSizeWatcher}\n;${cssTransformations}`
 }
 
 // Library entry point. Initializes UI scaling with provided options
@@ -150,12 +87,5 @@ export default function(options?: UiScalerOptions) {
   const config = resolveConfig(mergedOptions)
 
   injectFontSizeWatcher(config)
-
-  if (window.document.readyState !== 'loading') {
-    transformStyles(config)
-  } else {
-    window.document.addEventListener('DOMContentLoaded', function() {
-      transformStyles(config)
-    })
-  }
+  injectCssTransformations(config)
 }

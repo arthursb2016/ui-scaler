@@ -1,26 +1,19 @@
-import scaleUI, { collectStyleRules, mergeUiScalerOptions, resolveConfig } from '../src/index'
-import transformCss from '../src/transformCss'
+import scaleUI, { mergeUiScalerOptions, resolveConfig } from '../src/index'
+import transformCssScript from '../src/transformCssScript'
 import scalerScript from '../src/script'
 import { uiScalerOptionsDefault, transformPixelsDefault } from '../src/options'
 import { UiScalerOptions } from '../src/types'
 
-jest.mock('../src/transformCss')
+jest.mock('../src/transformCssScript')
 jest.mock('../src/script')
 
-const mockedTransformCss = transformCss as jest.Mock
+const mockedTransformCssScript = transformCssScript as jest.Mock
 const mockedScalerScript = scalerScript as jest.Mock
-
-function addStylesheet(css: string) {
-  const styleEl = document.createElement('style')
-  styleEl.textContent = css
-  document.head.appendChild(styleEl)
-  return styleEl.sheet as CSSStyleSheet
-}
 
 beforeEach(() => {
   document.head.innerHTML = ''
   document.documentElement.removeAttribute('data-ui-scaler-options')
-  mockedTransformCss.mockReset().mockReturnValue('')
+  mockedTransformCssScript.mockReset().mockReturnValue('/* mock css script */')
   mockedScalerScript.mockReset().mockReturnValue('/* mock script */')
 })
 
@@ -54,39 +47,6 @@ describe('mergeUiScalerOptions()', () => {
     })
     expect(result.enableLandscapeScaling).toBe(false)
     expect(result.baseFontSize).toBe(0)
-  })
-})
-
-describe('collectStyleRules()', () => {
-  test('collects top-level CSSStyleRule instances', () => {
-    const sheet = addStylesheet('.a { color: red; } .b { color: blue; }')
-    const rules = collectStyleRules(sheet.cssRules)
-    expect(rules.map(r => r.selectorText)).toEqual(['.a', '.b'])
-    expect(rules.every(r => r instanceof CSSStyleRule)).toBe(true)
-  })
-
-  test('recurses into @layer blocks', () => {
-    const sheet = addStylesheet('@layer utilities { .text-sm { font-size: 1px; } }')
-    const rules = collectStyleRules(sheet.cssRules)
-    expect(rules.map(r => r.selectorText)).toEqual(['.text-sm'])
-  })
-
-  test('recurses into @media blocks', () => {
-    const sheet = addStylesheet('@media (min-width: 100px) { .foo { color: red; } }')
-    const rules = collectStyleRules(sheet.cssRules)
-    expect(rules.map(r => r.selectorText)).toEqual(['.foo'])
-  })
-
-  test('recurses through multiple nested grouping rules', () => {
-    const sheet = addStylesheet('@layer utilities { @media (min-width: 100px) { .bar { color: green; } } }')
-    const rules = collectStyleRules(sheet.cssRules)
-    expect(rules.map(r => r.selectorText)).toEqual(['.bar'])
-  })
-
-  test('collects a mix of top-level and nested rules', () => {
-    const sheet = addStylesheet('.a { color: red; } @layer utilities { .b { color: blue; } }')
-    const rules = collectStyleRules(sheet.cssRules)
-    expect(rules.map(r => r.selectorText)).toEqual(['.a', '.b'])
   })
 })
 
@@ -292,55 +252,36 @@ describe('scaleUI() (default export)', () => {
     expect(mockedScalerScript).toHaveBeenCalledWith(18, true, true)
   })
 
+  test('appends the css transformations script tag with the resolved options', () => {
+    scaleUI()
+    const scriptEl = document.head.querySelector('script[data-ui-scaler-css-transformations]')
+    expect(scriptEl).not.toBeNull()
+    expect(scriptEl?.textContent).toBe('/* mock css script */')
+    expect(mockedTransformCssScript).toHaveBeenCalledWith(false, transformPixelsDefault)
+  })
+
+  test('passes custom pixel transformation options through to the css transformations script', () => {
+    scaleUI({ transformPixels: { excludeAttributes: ['border-radius'] } })
+    expect(mockedTransformCssScript).toHaveBeenCalledWith(true, expect.objectContaining({ excludeAttributes: ['border-radius'] }))
+  })
+
   test('defaults transformPixels to true in runtime mode unless overridden', () => {
-    jest.useFakeTimers()
-    addStylesheet('.a { color: red; }')
     scaleUI({ transformPixels: 'runtime' })
-    jest.runAllTimers()
-    expect(mockedTransformCss).toHaveBeenCalledWith(true, expect.anything(), expect.anything())
-    jest.useRealTimers()
+    expect(mockedTransformCssScript).toHaveBeenCalledWith(true, expect.anything())
   })
 
   test('disables pixel transformation in runtime mode when explicitly set to false via the html attribute', () => {
-    jest.useFakeTimers()
-    addStylesheet('.a { color: red; }')
     document.documentElement.setAttribute('data-ui-scaler-options', JSON.stringify({ transformPixels: false }))
     scaleUI({ transformPixels: 'runtime' })
-    jest.runAllTimers()
-    expect(mockedTransformCss).toHaveBeenCalledWith(false, expect.anything(), expect.anything())
-    jest.useRealTimers()
+    expect(mockedTransformCssScript).toHaveBeenCalledWith(false, expect.anything())
   })
 
-  test('injects the font-size watcher immediately while the document is still loading', () => {
+  test('injects both scripts while the document is still loading, since they wait for it by themselves', () => {
     const readyStateSpy = jest.spyOn(document, 'readyState', 'get').mockReturnValue('loading')
     scaleUI()
     readyStateSpy.mockRestore()
 
     expect(document.head.querySelector('script[data-ui-scaler-html-font-size-watcher]')).not.toBeNull()
-  })
-
-  test('waits for DOMContentLoaded before transforming styles while the document is still loading', () => {
-    jest.useFakeTimers()
-    const readyStateSpy = jest.spyOn(document, 'readyState', 'get').mockReturnValue('loading')
-    const addListenerSpy = jest.spyOn(document, 'addEventListener')
-    scaleUI()
-
-    // Read the calls BEFORE restoring: mockRestore() also clears mock.calls
-    const onReady = addListenerSpy.mock.calls.find(([type]) => type === 'DOMContentLoaded')?.[1] as EventListener
-    readyStateSpy.mockRestore()
-    addListenerSpy.mockRestore()
-
-    expect(onReady).toBeDefined()
-
-    jest.runAllTimers()
-    expect(document.head.querySelector('style[data-ui-scaler-transformations]')).toBeNull()
-
-    // Invoke the handler registered by THIS call, rather than dispatching a real event:
-    // a listener left on document by another test could otherwise satisfy the assertion below
-    onReady(new Event('DOMContentLoaded'))
-    jest.runAllTimers()
-    expect(document.head.querySelector('style[data-ui-scaler-transformations]')).not.toBeNull()
-
-    jest.useRealTimers()
+    expect(document.head.querySelector('script[data-ui-scaler-css-transformations]')).not.toBeNull()
   })
 })
