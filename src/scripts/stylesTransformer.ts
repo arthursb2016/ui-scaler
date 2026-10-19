@@ -11,7 +11,8 @@ export default (shouldTransformPixels: boolean, options: TransformPixelsOptions)
   const serializedOptions = JSON.stringify(options).replace(/</g, '\\u003c')
 
   return String.raw`
-    if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+    if (typeof window !== 'undefined' && typeof document !== 'undefined' && !window.__uiScalerStyles) {
+      window.__uiScalerStyles = true
       const shouldTransformPixels = ${shouldTransformPixels}
       const options = ${serializedOptions}
 
@@ -34,6 +35,19 @@ export default (shouldTransformPixels: boolean, options: TransformPixelsOptions)
         return styleRules
       }
 
+      // Wraps a transformed rule in the grouping rules (@media, @layer, @supports, etc.) the original rule was declared in,
+      function wrapInParentRules(rule, css) {
+        let parent = rule.parentRule
+        while (parent) {
+          const cssText = parent.cssText || ''
+          const bodyStart = cssText.indexOf('{')
+          const header = bodyStart > 0 ? cssText.slice(0, bodyStart).trim() : ''
+          if (header) css = header + ' {' + css + '}'
+          parent = parent.parentRule
+        }
+        return css
+      }
+
       function transformCss(rule) {
         const selector = rule.selectorText
         if (!selector) return ''
@@ -50,27 +64,29 @@ export default (shouldTransformPixels: boolean, options: TransformPixelsOptions)
           transformations.set('font-size', 'calc(' + fontSizeValue + ' + var(${browserFontSizeDiffVarName}))')
         }
 
-        Array.from(rule.styleMap).forEach(function(prop) {
-          const propName = prop[0]
-          if (propName === 'font-size') return
+        if (shouldTransformPixels && rule.styleMap) {
+          Array.from(rule.styleMap).forEach(function(prop) {
+            const propName = prop[0]
+            if (propName === 'font-size') return
 
-          const cssUnitValueArr = prop[1]
-          if (cssUnitValueArr && Array.isArray(cssUnitValueArr) && cssUnitValueArr[0] instanceof CSSUnitValue) {
-            const cssUnitValue = cssUnitValueArr[0]
-            const isPixelUnit = cssUnitValue.unit === 'px'
-            const isExcludedAttr = options.excludeAttributes.some(function(i) { return propName.includes(i) })
-            if (shouldTransformPixels && isPixelUnit && !isExcludedSelector && !isExcludedAttr) {
-              transformations.set(propName, getPxToRemValue(cssUnitValue.value) + 'rem')
+            const cssUnitValueArr = prop[1]
+            if (cssUnitValueArr && Array.isArray(cssUnitValueArr) && cssUnitValueArr[0] instanceof CSSUnitValue) {
+              const cssUnitValue = cssUnitValueArr[0]
+              const isPixelUnit = cssUnitValue.unit === 'px'
+              const isExcludedAttr = options.excludeAttributes.some(function(i) { return propName.includes(i) })
+              if (isPixelUnit && !isExcludedSelector && !isExcludedAttr) {
+                transformations.set(propName, getPxToRemValue(cssUnitValue.value) + 'rem')
+              }
             }
-          }
-        })
+          })
+        }
 
         if (!transformations.size) return ''
         let transformedCss = selector + ':not(.${bypassScalerTransformationClassName}) {'
         transformations.forEach(function(value, key) {
           transformedCss += key + ': ' + value + ';'
         })
-        return transformedCss + '}'
+        return wrapInParentRules(rule, transformedCss + '}')
       }
 
       // Transforms the styles that already exist in the document
@@ -98,7 +114,9 @@ export default (shouldTransformPixels: boolean, options: TransformPixelsOptions)
           mutations.forEach(function(mutation) {
             if (mutation.type !== 'childList') return
             mutation.addedNodes.forEach(function(node) {
-              if (node.nodeType === Node.ELEMENT_NODE && node.tagName.toLowerCase() === 'style' && node.sheet) {
+              if (node.nodeType !== Node.ELEMENT_NODE) return
+              if (node.hasAttribute('data-ui-scaler-transformations')) return
+              if (node.tagName.toLowerCase() === 'style' && node.sheet) {
                 let transformations = ''
                 collectStyleRules(node.sheet.cssRules).forEach(function(rule) {
                   transformations += transformCss(rule)

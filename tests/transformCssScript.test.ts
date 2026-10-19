@@ -82,6 +82,7 @@ beforeEach(() => {
 afterEach(() => {
   observers.forEach((observer) => observer.disconnect())
   window.MutationObserver = RealMutationObserver
+  delete (window as any).__uiScalerStyles
   delete (document as any).styleSheets
   delete (CSSStyleRule.prototype as any).styleMap
   jest.restoreAllMocks()
@@ -195,6 +196,28 @@ describe('transformations written by the script', () => {
     expect(getTransformations()).toBe(rule('.p-2', 'padding: 1rem;'))
   })
 
+  test('keeps the font-size transformation when the browser has no styleMap (e.g. Firefox, Safari)', async () => {
+    const ruleWithoutStyleMap = Object.create(CSSStyleRule.prototype)
+    Object.defineProperty(ruleWithoutStyleMap, 'selectorText', { value: '.text-base' })
+    Object.defineProperty(ruleWithoutStyleMap, 'styleMap', { value: undefined })
+    Object.defineProperty(ruleWithoutStyleMap, 'style', { value: { getPropertyValue: () => '16px' } })
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
+    await run(false, [ruleWithoutStyleMap])
+    expect(getTransformations()).toBe(fontSizeRule('.text-base', '1rem'))
+    expect(warnSpy).not.toHaveBeenCalled()
+  })
+
+  test('does not throw when pixels are transformed but the browser has no styleMap', async () => {
+    const ruleWithoutStyleMap = Object.create(CSSStyleRule.prototype)
+    Object.defineProperty(ruleWithoutStyleMap, 'selectorText', { value: '.text-base' })
+    Object.defineProperty(ruleWithoutStyleMap, 'styleMap', { value: undefined })
+    Object.defineProperty(ruleWithoutStyleMap, 'style', { value: { getPropertyValue: () => '16px' } })
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
+    await run(true, [ruleWithoutStyleMap])
+    expect(getTransformations()).toBe(fontSizeRule('.text-base', '1rem'))
+    expect(warnSpy).not.toHaveBeenCalled()
+  })
+
   test('concatenates the transformations of several rules', async () => {
     await run(false, [
       createMockRule({ selectorText: '.a', rawStyles: { 'font-size': '16px' } }),
@@ -214,7 +237,59 @@ describe('transformations written by the script', () => {
   })
 })
 
+describe('running the script more than once', () => {
+  test('creates a single transformations style and observer', async () => {
+    addStyle('.a { font-size: 16px; }')
+    await run(false)
+    await run(false)
+    expect(document.head.querySelectorAll('style[data-ui-scaler-transformations]')).toHaveLength(1)
+    expect(observers).toHaveLength(1)
+    expect(getTransformations()).toBe(fontSizeRule('.a', '1rem'))
+  })
+
+  test('transforms newly added styles only once', async () => {
+    await run(false)
+    await run(false)
+    const styleEl = addStyle('.late { font-size: 32px; }')
+    await tick()
+    expect(styleEl.textContent).toBe('.late { font-size: 32px; }' + fontSizeRule('.late', '2rem'))
+  })
+})
+
 describe('rules inside grouping rules', () => {
+  function createNestedRule(selector: string, parents: string[]) {
+    const nested = createMockRule({ selectorText: selector, rawStyles: { 'font-size': '16px' } })
+    // parents are listed from the innermost to the outermost
+    let child: any = nested
+    parents.forEach((header) => {
+      const parent = { cssText: `${header} { /* body */ }` }
+      Object.defineProperty(child, 'parentRule', { value: parent, configurable: true })
+      child = parent
+    })
+    return nested
+  }
+
+  test('wraps the transformed rule in the @media block of the original rule', async () => {
+    await run(false, [createNestedRule('.title', ['@media (min-width: 768px)'])])
+    expect(getTransformations()).toBe(`@media (min-width: 768px) {${fontSizeRule('.title', '1rem')}}`)
+  })
+
+  test('wraps the transformed rule in every nested grouping rule, outermost first', async () => {
+    await run(false, [createNestedRule('.title', ['@media (min-width: 768px)', '@layer utilities'])])
+    expect(getTransformations()).toBe(`@layer utilities {@media (min-width: 768px) {${fontSizeRule('.title', '1rem')}}}`)
+  })
+
+  test('does not wrap rules that are not inside a grouping rule', async () => {
+    await run(false, [createNestedRule('.title', [])])
+    expect(getTransformations()).toBe(fontSizeRule('.title', '1rem'))
+  })
+
+  test('wraps the rules of real stylesheets', async () => {
+    addStyle('@media (min-width: 100px) { .foo { font-size: 16px; } }')
+    await run(false)
+    expect(getTransformations()).toMatch(/^@media \(min-width: 100px\) \{.foo:not\(\.ignore-ui-scaler\) \{font-size: calc\(1rem \+ var\(--browser-font-size-diff\)\);\}\}$/)
+  })
+
   test('collects top-level rules of the real stylesheets', async () => {
     addStyle('.a { font-size: 16px; } .b { font-size: 32px; }')
     await run(false)
@@ -224,29 +299,40 @@ describe('rules inside grouping rules', () => {
   test('recurses into @layer blocks', async () => {
     addStyle('@layer utilities { .text-sm { font-size: 16px; } }')
     await run(false)
-    expect(getTransformations()).toBe(fontSizeRule('.text-sm', '1rem'))
+    expect(getTransformations()).toBe(`@layer utilities {${fontSizeRule('.text-sm', '1rem')}}`)
   })
 
   test('recurses into @media blocks', async () => {
     addStyle('@media (min-width: 100px) { .foo { font-size: 16px; } }')
     await run(false)
-    expect(getTransformations()).toBe(fontSizeRule('.foo', '1rem'))
+    expect(getTransformations()).toBe(`@media (min-width: 100px) {${fontSizeRule('.foo', '1rem')}}`)
   })
 
   test('recurses through multiple nested grouping rules', async () => {
     addStyle('@layer utilities { @media (min-width: 100px) { .bar { font-size: 16px; } } }')
     await run(false)
-    expect(getTransformations()).toBe(fontSizeRule('.bar', '1rem'))
+    // jsdom does not link the rules nested in an @layer back to it, so only the innermost @media wrapper is asserted
+    expect(getTransformations()).toContain(`@media (min-width: 100px) {${fontSizeRule('.bar', '1rem')}}`)
   })
 
   test('collects a mix of top-level and nested rules', async () => {
     addStyle('.a { font-size: 16px; } @layer utilities { .b { font-size: 32px; } }')
     await run(false)
-    expect(getTransformations()).toBe(fontSizeRule('.a', '1rem') + fontSizeRule('.b', '2rem'))
+    expect(getTransformations()).toBe(fontSizeRule('.a', '1rem') + `@layer utilities {${fontSizeRule('.b', '2rem')}}`)
   })
 })
 
 describe('newly added styles', () => {
+  test('does not transform the transformations style itself', async () => {
+    await run(false)
+    const ownStyle = document.createElement('style')
+    ownStyle.setAttribute('data-ui-scaler-transformations', 'true')
+    ownStyle.textContent = '.own { font-size: 16px; }'
+    document.head.appendChild(ownStyle)
+    await tick()
+    expect(ownStyle.textContent).toBe('.own { font-size: 16px; }')
+  })
+
   test('appends the transformations to a <style> added after the script ran', async () => {
     await run(false)
     const styleEl = addStyle('.late { font-size: 32px; }')
