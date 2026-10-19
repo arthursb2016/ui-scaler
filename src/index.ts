@@ -72,7 +72,7 @@ function injectCssTransformations(config: ResolvedConfig) {
 }
 
 // SSR helper: returns the whole ui-scaler setup as a script string, to be rendered inline in the server <head>
-export function getSsrScript(options?: Pick<UiScalerOptions, 'baseFontSize' | 'enableLandscapeScaling' | 'enablePortraitScaling'>): string {
+export function getUiScalerSsrScript(options?: Pick<UiScalerOptions, 'baseFontSize' | 'enableLandscapeScaling' | 'enablePortraitScaling'>): string {
   const { baseFontSize, enableLandscapeScaling, enablePortraitScaling } = mergeUiScalerOptions(uiScalerOptionsDefault, options)
   const fontSizeWatcher = scalerScript(baseFontSize, enableLandscapeScaling, enablePortraitScaling)
   const cssTransformations = transformCssScript(false, transformPixelsDefault)
