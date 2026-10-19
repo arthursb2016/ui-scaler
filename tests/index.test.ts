@@ -1,11 +1,11 @@
 import scaleUI, { mergeUiScalerOptions, resolveConfig } from '../src/index'
-import transformCssScript from '../src/transformCssScript'
-import scalerScript from '../src/script'
+import transformCssScript from '../src/scripts/stylesTransformer'
+import scalerScript from '../src/scripts/fontSizeWatcher'
 import { uiScalerOptionsDefault, transformPixelsDefault } from '../src/options'
 import { UiScalerOptions } from '../src/types'
 
-jest.mock('../src/transformCssScript')
-jest.mock('../src/script')
+jest.mock('../src/scripts/stylesTransformer')
+jest.mock('../src/scripts/fontSizeWatcher')
 
 const mockedTransformCssScript = transformCssScript as jest.Mock
 const mockedScalerScript = scalerScript as jest.Mock

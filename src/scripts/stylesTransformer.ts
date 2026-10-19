@@ -1,7 +1,7 @@
-import { TransformPixelsOptions } from './types'
-import { htmlTagBaseFontSize, bypassScalerTransformationClassName, browserFontSizeDiffVarName } from './constants'
+import { TransformPixelsOptions } from '../types'
+import { htmlTagBaseFontSize, bypassScalerTransformationClassName, browserFontSizeDiffVarName } from '../constants'
 
-// Single source of truth of the css transformations. Returns a script (as a string) that:
+// Returns a script (as a string) that:
 // - transforms the font-size styles to calc the browser font-size difference
 // - optionally transforms other pixel-based styles to rems
 // - does the same for the <style> elements added afterwards

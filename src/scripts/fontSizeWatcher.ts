@@ -1,7 +1,7 @@
-import { htmlTagBaseFontSize, browserFontSizeDiffVarName } from './constants'
+import { htmlTagBaseFontSize, browserFontSizeDiffVarName } from '../constants'
 
 export default (configBaseFontSize: number, enableLandscapeScaling: boolean, enablePortraitScaling: boolean) => {
-  return `
+  return String.raw`
     if (typeof window !== 'undefined') {
       if (window.__uiScaler) {
         window.removeEventListener('resize', window.__uiScaler.onResize)

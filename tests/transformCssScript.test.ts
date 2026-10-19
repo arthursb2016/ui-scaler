@@ -1,4 +1,4 @@
-import transformCssScript from '../src/transformCssScript'
+import transformCssScript from '../src/scripts/stylesTransformer'
 import { transformPixelsDefault } from '../src/options'
 import { bypassScalerTransformationClassName, browserFontSizeDiffVarName } from '../src/constants'
 import { TransformPixelsOptions } from '../src/types'

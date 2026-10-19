@@ -2,8 +2,8 @@ import { isValidJsonString } from './utils'
 import { UiScalerOptions, ResolvedConfig } from './types'
 import { transformPixelsDefault, uiScalerOptionsDefault } from './options'
 
-import scalerScript from './script'
-import transformCssScript from './transformCssScript'
+import scalerScript from './scripts/fontSizeWatcher'
+import transformCssScript from './scripts/stylesTransformer'
 
 const runtimeOptionsDefault: Required<UiScalerOptions> = { ...uiScalerOptionsDefault, transformPixels: true }
 
