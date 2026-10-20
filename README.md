@@ -178,10 +178,10 @@ scaleUI({ enablePortraitScaling: false })
 The server does not know the user's screen resolution, so the scale is always calculated in the browser. To avoid a visible jump on first paint (the page rendering at the default font-size and then rescaling after JS loads), render the scaler script inline in your `<head>`. The browser runs it while parsing the HTML, before painting the body.
 
 ```JavaScript
-import { getScalerScript } from 'ui-scaler'
+import { getUiScalerSsrScript } from 'ui-scaler'
 
 // Same options as scaleUI: baseFontSize, enableLandscapeScaling, enablePortraitScaling
-const script = getScalerScript({ baseFontSize: 16 })
+const script = getUiScalerSsrScript({ baseFontSize: 16 })
 ```
 
 Next.js example (root layout):
@@ -189,17 +189,22 @@ Next.js example (root layout):
 ```JSX
 <html lang="en" suppressHydrationWarning>
   <head>
-    <script dangerouslySetInnerHTML={{ __html: getScalerScript() }} />
+    <script dangerouslySetInnerHTML={{ __html: getUiScalerSsrScript() }} />
   </head>
   ...
 </html>
 ```
 
 Notes:
-- Pixel transformation (`transformPixels`) is not recommended in SSR apps. It runs on the client after load, so the transformed styles are applied late and can cause visual flicker. Use `rem` units in your styles instead, and rely on `getScalerScript()` only.
-- Calling `scaleUI()` on the client is not needed when using `getScalerScript()`.
+- Pixel transformation (`transformPixels`) is not recommended in SSR apps. It runs on the client after load, so the transformed styles are applied late and can cause visual flicker. Use `rem` units in your styles instead, and rely on `getUiScalerSsrScript()` only.
+- Calling `scaleUI()` on the client is not needed when using `getUiScalerSsrScript()`.
 - `suppressHydrationWarning` is needed on `<html>` in React, since the script adds a `style` attribute to it.
-- If you use a CSP, add your nonce to the inline `<script>` tag.
+- If you use a CSP, the inline `<script>` must be allowed: add your nonce to the tag, or allow its hash. See [Content-Security-Policy](#content-security-policy-csp).
+
+## Content-Security-Policy (CSP)
+
+- **Client installation:** nothing to configure. `ui-scaler` does not inject any `<script>` or `<style>` element. It sets the html font-size through the CSSOM and applies its style transformations through a constructable stylesheet (`adoptedStyleSheets`, with a `<style>` element as a fallback for older browsers), so a policy like `script-src 'self'; style-src 'self'` works as is.
+- **SSR installation:** the inline `<script>` must be allowed, with a nonce (`<script nonce="...">`) or its hash. `'unsafe-inline'` is not needed.
 
 ## HTML options binding
 
