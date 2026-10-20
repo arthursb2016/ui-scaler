@@ -17,10 +17,12 @@
     "dist"
   ],
   "scripts": {
+    "generate": "node scripts/generate-runtime-sources.js",
+    "pretest": "npm run generate",
     "test": "jest --verbose ./tests",
-    "build": "rollup -c --bundleConfigAsCjs && npm run browserify",
+    "build": "npm run generate && rollup -c --bundleConfigAsCjs && npm run browserify",
     "prepublishOnly": "npm test && npm run build",
-    "browserify": "tsc src/browserify.ts --outDir temp && browserify temp/browserify.js -t [ babelify --presets [ '@babel/preset-env' ] ] | terser -c -m -o dist/browser-bundle.min.js && rm -rf temp"
+    "browserify": "tsc src/entries/browserify.ts --outDir temp && browserify temp/entries/browserify.js -t [ babelify --presets [ '@babel/preset-env' ] ] | terser -c -m -o dist/browser-bundle.min.js && rm -rf temp"
   },
   "keywords": [
     "ui",

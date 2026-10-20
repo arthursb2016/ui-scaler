@@ -3,6 +3,6 @@
   * @author   Arthur Borba <https://arthurborba.dev>
   * @license  MIT
   */
-import scaleUI from './index'
+import scaleUI from './client'
 
 scaleUI({ transformPixels: 'runtime' })

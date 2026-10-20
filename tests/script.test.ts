@@ -1,5 +1,5 @@
 import scalerScript from '../src/scripts/fontSizeWatcher'
-import { htmlTagBaseFontSize, browserFontSizeDiffVarName } from '../src/constants'
+import { htmlTagBaseFontSize, browserFontSizeDiffVarName } from '../src/config/constants'
 
 const html = document.documentElement
 const win = window as any

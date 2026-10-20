@@ -26,24 +26,25 @@ describe('getUiScalerSsrScript', () => {
     const script = getUiScalerSsrScript()
     expect(script).toContain('data-ui-scaler-transformations')
     expect(script).toContain('function transformCss(rule)')
+    expect(script).toContain('adoptedStyleSheets')
   })
 
   it('embeds the provided options', () => {
     const script = getUiScalerSsrScript({ baseFontSize: 20, enableLandscapeScaling: false, enablePortraitScaling: true })
-    expect(script).toContain('const configured = 20')
-    expect(script).toContain('const enableLandscapeScaling = false')
-    expect(script).toContain('const enablePortraitScaling = true')
+    expect(script).toContain('"baseFontSize":20')
+    expect(script).toContain('"enableLandscapeScaling":false')
+    expect(script).toContain('"enablePortraitScaling":true')
   })
 
   it('uses the defaults when no options are provided', () => {
     const script = getUiScalerSsrScript()
-    expect(script).toContain('const configured = 16')
-    expect(script).toContain('const enableLandscapeScaling = true')
-    expect(script).toContain('const enablePortraitScaling = true')
+    expect(script).toContain('"baseFontSize":16')
+    expect(script).toContain('"enableLandscapeScaling":true')
+    expect(script).toContain('"enablePortraitScaling":true')
   })
 
   it('does not transform pixels', () => {
-    expect(getUiScalerSsrScript()).toContain('const shouldTransformPixels = false')
+    expect(getUiScalerSsrScript()).toContain('"shouldTransformPixels":false')
   })
 
   it('produces a script that is valid JavaScript', () => {

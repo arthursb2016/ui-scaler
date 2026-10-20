@@ -1,7 +1,7 @@
 import transformCssScript from '../src/scripts/stylesTransformer'
-import { transformPixelsDefault } from '../src/options'
-import { bypassScalerTransformationClassName, browserFontSizeDiffVarName } from '../src/constants'
-import { TransformPixelsOptions } from '../src/types'
+import { transformPixelsDefault } from '../src/config/options'
+import { bypassScalerTransformationClassName, browserFontSizeDiffVarName } from '../src/config/constants'
+import { TransformPixelsOptions } from '../src/config/types'
 
 class MockCSSUnitValue {
   value: number
@@ -96,8 +96,8 @@ describe('transformCssScript()', () => {
   })
 
   test('embeds the shouldTransformPixels flag', () => {
-    expect(transformCssScript(true, transformPixelsDefault)).toContain('const shouldTransformPixels = true')
-    expect(transformCssScript(false, transformPixelsDefault)).toContain('const shouldTransformPixels = false')
+    expect(transformCssScript(true, transformPixelsDefault)).toContain('"shouldTransformPixels":true')
+    expect(transformCssScript(false, transformPixelsDefault)).toContain('"shouldTransformPixels":false')
   })
 
   test('escapes the options so they cannot close the script tag', () => {
@@ -374,5 +374,59 @@ describe('when the script runs', () => {
   test('runs right away when the document is already parsed', async () => {
     await run(false)
     expect(getTransformations()).toBe('')
+  })
+})
+
+describe('with constructable stylesheets (adoptedStyleSheets)', () => {
+  class MockCSSStyleSheet {
+    css = ''
+    replaceSync(css: string) { this.css = css }
+  }
+  const realCSSStyleSheet = (global as any).CSSStyleSheet
+  const hadAdopted = 'adoptedStyleSheets' in document
+
+  beforeEach(() => {
+    (global as any).CSSStyleSheet = MockCSSStyleSheet
+    ;(document as any).adoptedStyleSheets = []
+  })
+
+  afterEach(() => {
+    (global as any).CSSStyleSheet = realCSSStyleSheet
+    if (!hadAdopted) delete (document as any).adoptedStyleSheets
+  })
+
+  const adopted = () => (document as any).adoptedStyleSheets as MockCSSStyleSheet[]
+
+  test('adopts one stylesheet with the transformations, without creating a style element', async () => {
+    await run(false, [createMockRule({ selectorText: '.a', rawStyles: { 'font-size': '16px' } })])
+    expect(adopted()).toHaveLength(1)
+    expect(adopted()[0].css).toBe(fontSizeRule('.a', '1rem'))
+    expect(document.head.querySelector('style')).toBeNull()
+  })
+
+  test('adds the transformations of newly added styles to the same adopted stylesheet, leaving them untouched', async () => {
+    await run(false, [createMockRule({ selectorText: '.a', rawStyles: { 'font-size': '16px' } })])
+    const styleEl = document.createElement('style')
+    styleEl.textContent = '.late { font-size: 32px; }'
+    Object.defineProperty(styleEl, 'sheet', { value: { cssRules: [createMockRule({ selectorText: '.late', rawStyles: { 'font-size': '32px' } })] } })
+    document.head.appendChild(styleEl)
+    await tick()
+    expect(adopted()).toHaveLength(1)
+    expect(adopted()[0].css).toBe(fontSizeRule('.a', '1rem') + fontSizeRule('.late', '2rem'))
+    expect(styleEl.textContent).toBe('.late { font-size: 32px; }')
+  })
+
+  test('does not adopt anything when there is nothing to transform', async () => {
+    await run(false, [createMockRule({ styleMap: new Map([['margin-top', unitEntry(1, 'rem')]]) })])
+    expect(adopted()).toHaveLength(0)
+    expect(document.head.querySelector('style')).toBeNull()
+  })
+
+  test('falls back to a style element when the stylesheet cannot be adopted', async () => {
+    MockCSSStyleSheet.prototype.replaceSync = () => { throw new Error('blocked') }
+    await run(false, [createMockRule({ selectorText: '.a', rawStyles: { 'font-size': '16px' } })])
+    expect(getTransformations()).toBe(fontSizeRule('.a', '1rem'))
+    delete (MockCSSStyleSheet.prototype as any).replaceSync
+    MockCSSStyleSheet.prototype.replaceSync = function(this: MockCSSStyleSheet, css: string) { this.css = css }
   })
 })

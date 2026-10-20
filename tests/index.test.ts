@@ -1,20 +1,25 @@
 import scaleUI, { mergeUiScalerOptions, resolveConfig } from '../src/index'
-import transformCssScript from '../src/scripts/stylesTransformer'
-import scalerScript from '../src/scripts/fontSizeWatcher'
-import { uiScalerOptionsDefault, transformPixelsDefault } from '../src/options'
-import { UiScalerOptions } from '../src/types'
+import { runStylesTransformer } from '../src/runtime/stylesTransformer'
+import { runFontSizeWatcher } from '../src/runtime/fontSizeWatcher'
+import { bypassScalerTransformationClassName, browserFontSizeDiffVarName, htmlTagBaseFontSize } from '../src/config/constants'
+import { uiScalerOptionsDefault, transformPixelsDefault } from '../src/config/options'
+import { UiScalerOptions } from '../src/config/types'
 
-jest.mock('../src/scripts/stylesTransformer')
-jest.mock('../src/scripts/fontSizeWatcher')
+jest.mock('../src/runtime/stylesTransformer')
+jest.mock('../src/runtime/fontSizeWatcher')
 
-const mockedTransformCssScript = transformCssScript as jest.Mock
-const mockedScalerScript = scalerScript as jest.Mock
+const mockedStylesTransformer = runStylesTransformer as jest.Mock
+const mockedFontSizeWatcher = runFontSizeWatcher as jest.Mock
+
+const watcherParams = (baseFontSize: number, enableLandscapeScaling: boolean, enablePortraitScaling: boolean) => ({
+  htmlTagBaseFontSize, baseFontSize, enableLandscapeScaling, enablePortraitScaling, browserFontSizeDiffVarName
+})
 
 beforeEach(() => {
   document.head.innerHTML = ''
   document.documentElement.removeAttribute('data-ui-scaler-options')
-  mockedTransformCssScript.mockReset().mockReturnValue('/* mock css script */')
-  mockedScalerScript.mockReset().mockReturnValue('/* mock script */')
+  mockedStylesTransformer.mockReset()
+  mockedFontSizeWatcher.mockReset()
 })
 
 describe('mergeUiScalerOptions()', () => {
@@ -224,17 +229,21 @@ describe('resolveConfig()', () => {
 })
 
 describe('scaleUI() (default export)', () => {
-  test('appends the font-size watcher script tag with default options', () => {
+  test('runs the font-size watcher directly with default options', () => {
     scaleUI()
-    const scriptEl = document.head.querySelector('script[data-ui-scaler-html-font-size-watcher]')
-    expect(scriptEl).not.toBeNull()
-    expect(scriptEl?.textContent).toBe('/* mock script */')
-    expect(mockedScalerScript).toHaveBeenCalledWith(16, true, true)
+    expect(mockedFontSizeWatcher).toHaveBeenCalledTimes(1)
+    expect(mockedFontSizeWatcher).toHaveBeenCalledWith(watcherParams(16, true, true))
   })
 
-  test('passes custom baseFontSize and scaling flags through to the generated script', () => {
+  test('does not inject any script or style element, so a CSP does not need to allow them', () => {
+    scaleUI()
+    expect(document.querySelector('script')).toBeNull()
+    expect(document.querySelector('style')).toBeNull()
+  })
+
+  test('passes custom baseFontSize and scaling flags through to the font-size watcher', () => {
     scaleUI({ baseFontSize: 20, enablePortraitScaling: false })
-    expect(mockedScalerScript).toHaveBeenCalledWith(20, true, false)
+    expect(mockedFontSizeWatcher).toHaveBeenCalledWith(watcherParams(20, true, false))
   })
 
   test('reads runtime options from the data-ui-scaler-options html attribute', () => {
@@ -243,45 +252,52 @@ describe('scaleUI() (default export)', () => {
       enablePortraitScaling: false
     }))
     scaleUI({ transformPixels: 'runtime' })
-    expect(mockedScalerScript).toHaveBeenCalledWith(24, true, false)
+    expect(mockedFontSizeWatcher).toHaveBeenCalledWith(watcherParams(24, true, false))
   })
 
   test('ignores the html attribute when not in runtime mode', () => {
     document.documentElement.setAttribute('data-ui-scaler-options', JSON.stringify({ baseFontSize: 24 }))
     scaleUI({ baseFontSize: 18 })
-    expect(mockedScalerScript).toHaveBeenCalledWith(18, true, true)
+    expect(mockedFontSizeWatcher).toHaveBeenCalledWith(watcherParams(18, true, true))
   })
 
-  test('appends the css transformations script tag with the resolved options', () => {
+  test('runs the css transformer directly with the resolved options', () => {
     scaleUI()
-    const scriptEl = document.head.querySelector('script[data-ui-scaler-css-transformations]')
-    expect(scriptEl).not.toBeNull()
-    expect(scriptEl?.textContent).toBe('/* mock css script */')
-    expect(mockedTransformCssScript).toHaveBeenCalledWith(false, transformPixelsDefault)
+    expect(mockedStylesTransformer).toHaveBeenCalledTimes(1)
+    expect(mockedStylesTransformer).toHaveBeenCalledWith({
+      shouldTransformPixels: false,
+      options: transformPixelsDefault,
+      htmlTagBaseFontSize,
+      bypassClassName: bypassScalerTransformationClassName,
+      browserFontSizeDiffVarName
+    })
   })
 
-  test('passes custom pixel transformation options through to the css transformations script', () => {
+  test('passes custom pixel transformation options through to the css transformer', () => {
     scaleUI({ transformPixels: { excludeAttributes: ['border-radius'] } })
-    expect(mockedTransformCssScript).toHaveBeenCalledWith(true, expect.objectContaining({ excludeAttributes: ['border-radius'] }))
+    expect(mockedStylesTransformer).toHaveBeenCalledWith(expect.objectContaining({
+      shouldTransformPixels: true,
+      options: expect.objectContaining({ excludeAttributes: ['border-radius'] })
+    }))
   })
 
   test('defaults transformPixels to true in runtime mode unless overridden', () => {
     scaleUI({ transformPixels: 'runtime' })
-    expect(mockedTransformCssScript).toHaveBeenCalledWith(true, expect.anything())
+    expect(mockedStylesTransformer).toHaveBeenCalledWith(expect.objectContaining({ shouldTransformPixels: true }))
   })
 
   test('disables pixel transformation in runtime mode when explicitly set to false via the html attribute', () => {
     document.documentElement.setAttribute('data-ui-scaler-options', JSON.stringify({ transformPixels: false }))
     scaleUI({ transformPixels: 'runtime' })
-    expect(mockedTransformCssScript).toHaveBeenCalledWith(false, expect.anything())
+    expect(mockedStylesTransformer).toHaveBeenCalledWith(expect.objectContaining({ shouldTransformPixels: false }))
   })
 
-  test('injects both scripts while the document is still loading, since they wait for it by themselves', () => {
+  test('runs both while the document is still loading, since they wait for it by themselves', () => {
     const readyStateSpy = jest.spyOn(document, 'readyState', 'get').mockReturnValue('loading')
     scaleUI()
     readyStateSpy.mockRestore()
 
-    expect(document.head.querySelector('script[data-ui-scaler-html-font-size-watcher]')).not.toBeNull()
-    expect(document.head.querySelector('script[data-ui-scaler-css-transformations]')).not.toBeNull()
+    expect(mockedFontSizeWatcher).toHaveBeenCalledTimes(1)
+    expect(mockedStylesTransformer).toHaveBeenCalledTimes(1)
   })
 })
