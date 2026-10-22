@@ -55,7 +55,7 @@ Add to your `index.html`:
 
 ## How it's done
 
-#### [A script](https://github.com/arthursb2016/ui-scaler/blob/master/src/scripts/fontSizeWatcher.ts) will be added to your app, which:
+#### [A script](https://github.com/arthursb2016/ui-scaler/blob/master/src/scripts/fontSizeHandler.ts) will be added to your app, which:
 
 1. Has 3kb
 2. Adds a window resize event listener that updates the HTML element font-size, based on the screen resolution, and the browser font-size

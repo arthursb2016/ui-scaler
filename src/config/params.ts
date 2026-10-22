@@ -1,7 +1,7 @@
 import { TransformPixelsOptions } from './types'
 import { htmlTagBaseFontSize, bypassScalerTransformationClassName, browserFontSizeDiffVarName } from './constants'
 
-export type FontSizeWatcherParams = {
+export type fontSizeHandlerParams = {
   htmlTagBaseFontSize: number
   baseFontSize: number
   enableLandscapeScaling: boolean
@@ -17,7 +17,7 @@ export type StylesTransformerParams = {
   browserFontSizeDiffVarName: string
 }
 
-export function getFontSizeWatcherParams(baseFontSize: number, enableLandscapeScaling: boolean, enablePortraitScaling: boolean): FontSizeWatcherParams {
+export function getfontSizeHandlerParams(baseFontSize: number, enableLandscapeScaling: boolean, enablePortraitScaling: boolean): fontSizeHandlerParams {
   return { htmlTagBaseFontSize, baseFontSize, enableLandscapeScaling, enablePortraitScaling, browserFontSizeDiffVarName }
 }
 

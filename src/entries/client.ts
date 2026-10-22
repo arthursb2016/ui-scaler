@@ -2,9 +2,9 @@ import { isValidJsonString } from '../utils'
 import { UiScalerOptions, ResolvedConfig } from '../config/types'
 import { transformPixelsDefault, uiScalerOptionsDefault } from '../config/options'
 
-import { runFontSizeWatcher } from '../runtime/fontSizeWatcher'
+import { runfontSizeHandler } from '../runtime/fontSizeHandler'
 import { runStylesTransformer } from '../runtime/stylesTransformer'
-import { getFontSizeWatcherParams, getStylesTransformerParams } from '../config/params'
+import { getfontSizeHandlerParams, getStylesTransformerParams } from '../config/params'
 
 const runtimeOptionsDefault: Required<UiScalerOptions> = { ...uiScalerOptionsDefault, transformPixels: true }
 
@@ -61,6 +61,6 @@ export default function(options?: UiScalerOptions) {
   const config = resolveConfig(mergedOptions)
 
   // Both run directly, with no injected <script> or <style>, so a Content-Security-Policy does not need to allow them
-  runFontSizeWatcher(getFontSizeWatcherParams(config.baseFontSize, config.enableLandscapeScaling, config.enablePortraitScaling))
+  runfontSizeHandler(getfontSizeHandlerParams(config.baseFontSize, config.enableLandscapeScaling, config.enablePortraitScaling))
   runStylesTransformer(getStylesTransformerParams(config.shouldTransformPixels, config.transformPixelsOptions))
 }

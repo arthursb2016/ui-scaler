@@ -2,7 +2,7 @@
 // Keeps the html font-size scaled with the viewport.
 // This function must be self-contained (no references outside of itself): it runs directly in the bundle, and its
 // compiled source is also embedded in the string returned by getUiScalerSsrScript (see scripts/generate-runtime-sources.js)
-export function runFontSizeWatcher(params) {
+export function runfontSizeHandler(params) {
   if (typeof window === 'undefined') return
 
   if (window.__uiScaler) {
@@ -104,7 +104,7 @@ export function runFontSizeWatcher(params) {
     }
   }
 
-  const initHtmlFontSizeWatcher = function() {
+  const initHtmlfontSizeHandler = function() {
     const state = { rafId: 0, onResize: null, onReady: updateHtmlFontSize, dprQuery: null, onDprChange: null }
 
     state.onResize = function() {
@@ -156,5 +156,5 @@ export function runFontSizeWatcher(params) {
     updateHtmlFontSize()
   }
 
-  initHtmlFontSizeWatcher()
+  initHtmlfontSizeHandler()
 }

@@ -1,15 +1,15 @@
 import scaleUI, { mergeUiScalerOptions, resolveConfig } from '../src/index'
 import { runStylesTransformer } from '../src/runtime/stylesTransformer'
-import { runFontSizeWatcher } from '../src/runtime/fontSizeWatcher'
+import { runfontSizeHandler } from '../src/runtime/fontSizeHandler'
 import { bypassScalerTransformationClassName, browserFontSizeDiffVarName, htmlTagBaseFontSize } from '../src/config/constants'
 import { uiScalerOptionsDefault, transformPixelsDefault } from '../src/config/options'
 import { UiScalerOptions } from '../src/config/types'
 
 jest.mock('../src/runtime/stylesTransformer')
-jest.mock('../src/runtime/fontSizeWatcher')
+jest.mock('../src/runtime/fontSizeHandler')
 
 const mockedStylesTransformer = runStylesTransformer as jest.Mock
-const mockedFontSizeWatcher = runFontSizeWatcher as jest.Mock
+const mockedfontSizeHandler = runfontSizeHandler as jest.Mock
 
 const watcherParams = (baseFontSize: number, enableLandscapeScaling: boolean, enablePortraitScaling: boolean) => ({
   htmlTagBaseFontSize, baseFontSize, enableLandscapeScaling, enablePortraitScaling, browserFontSizeDiffVarName
@@ -19,7 +19,7 @@ beforeEach(() => {
   document.head.innerHTML = ''
   document.documentElement.removeAttribute('data-ui-scaler-options')
   mockedStylesTransformer.mockReset()
-  mockedFontSizeWatcher.mockReset()
+  mockedfontSizeHandler.mockReset()
 })
 
 describe('mergeUiScalerOptions()', () => {
@@ -231,8 +231,8 @@ describe('resolveConfig()', () => {
 describe('scaleUI() (default export)', () => {
   test('runs the font-size watcher directly with default options', () => {
     scaleUI()
-    expect(mockedFontSizeWatcher).toHaveBeenCalledTimes(1)
-    expect(mockedFontSizeWatcher).toHaveBeenCalledWith(watcherParams(16, true, true))
+    expect(mockedfontSizeHandler).toHaveBeenCalledTimes(1)
+    expect(mockedfontSizeHandler).toHaveBeenCalledWith(watcherParams(16, true, true))
   })
 
   test('does not inject any script or style element, so a CSP does not need to allow them', () => {
@@ -243,7 +243,7 @@ describe('scaleUI() (default export)', () => {
 
   test('passes custom baseFontSize and scaling flags through to the font-size watcher', () => {
     scaleUI({ baseFontSize: 20, enablePortraitScaling: false })
-    expect(mockedFontSizeWatcher).toHaveBeenCalledWith(watcherParams(20, true, false))
+    expect(mockedfontSizeHandler).toHaveBeenCalledWith(watcherParams(20, true, false))
   })
 
   test('reads runtime options from the data-ui-scaler-options html attribute', () => {
@@ -252,13 +252,13 @@ describe('scaleUI() (default export)', () => {
       enablePortraitScaling: false
     }))
     scaleUI({ transformPixels: 'runtime' })
-    expect(mockedFontSizeWatcher).toHaveBeenCalledWith(watcherParams(24, true, false))
+    expect(mockedfontSizeHandler).toHaveBeenCalledWith(watcherParams(24, true, false))
   })
 
   test('ignores the html attribute when not in runtime mode', () => {
     document.documentElement.setAttribute('data-ui-scaler-options', JSON.stringify({ baseFontSize: 24 }))
     scaleUI({ baseFontSize: 18 })
-    expect(mockedFontSizeWatcher).toHaveBeenCalledWith(watcherParams(18, true, true))
+    expect(mockedfontSizeHandler).toHaveBeenCalledWith(watcherParams(18, true, true))
   })
 
   test('runs the css transformer directly with the resolved options', () => {
@@ -297,7 +297,7 @@ describe('scaleUI() (default export)', () => {
     scaleUI()
     readyStateSpy.mockRestore()
 
-    expect(mockedFontSizeWatcher).toHaveBeenCalledTimes(1)
+    expect(mockedfontSizeHandler).toHaveBeenCalledTimes(1)
     expect(mockedStylesTransformer).toHaveBeenCalledTimes(1)
   })
 })

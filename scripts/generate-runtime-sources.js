@@ -9,7 +9,7 @@ const runtimeDir = path.join(__dirname, '..', 'src', 'runtime')
 const outDir = path.join(__dirname, '..', 'src', 'generated')
 
 const sources = {
-  fontSizeWatcherSource: 'fontSizeWatcher.ts',
+  fontSizeHandlerSource: 'fontSizeHandler.ts',
   stylesTransformerSource: 'stylesTransformer.ts'
 }
 

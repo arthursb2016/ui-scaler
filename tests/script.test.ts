@@ -1,4 +1,4 @@
-import scalerScript from '../src/scripts/fontSizeWatcher'
+import scalerScript from '../src/scripts/fontSizeHandler'
 import { htmlTagBaseFontSize, browserFontSizeDiffVarName } from '../src/config/constants'
 
 const html = document.documentElement
