@@ -51,14 +51,15 @@ Add to your `index.html`:
 </head>
 ```
 
+(Make sure to place it after the `<meta name="viewport">` tag)
+
 ## How it's done
 
-#### [A script](https://github.com/arthursb2016/ui-scaler/blob/master/src/script.ts) will be added to your app, which:
+#### [A script](https://github.com/arthursb2016/ui-scaler/blob/master/src/scripts/fontSizeHandler.ts) will be added to your app, which:
 
 1. Has 3kb
-2. Runs once the document is ready
-3. Adds a window resize event listener that updates the HTML element font-size, based on the screen resolution, and the browser font-size
-4. Optionally, adds styles transformation logic that convert pixel values to rem values (see how to activate below) 
+2. Adds a window resize event listener that updates the HTML element font-size, based on the screen resolution, and the browser font-size
+3. Optionally, adds styles transformation logic that convert pixel values to rem values (see how to activate below)
 
 Notice your app HTML font-size to be different in each screen resolution
 
@@ -169,6 +170,41 @@ import scaleUI from 'ui-scaler'
 
 scaleUI({ enablePortraitScaling: false })
 ```
+
+## Server-side rendering (SSR)
+
+`scaleUI()` is a no-op when there is no `window`/`document`, so it is safe to import in SSR apps.
+
+The server does not know the user's screen resolution, so the scale is always calculated in the browser. To avoid a visible jump on first paint (the page rendering at the default font-size and then rescaling after JS loads), render the scaler script inline in your `<head>`. The browser runs it while parsing the HTML, before painting the body.
+
+```JavaScript
+import { getUiScalerSsrScript } from 'ui-scaler'
+
+// Same options as scaleUI: baseFontSize, enableLandscapeScaling, enablePortraitScaling
+const script = getUiScalerSsrScript({ baseFontSize: 16 })
+```
+
+Next.js example (root layout):
+
+```JSX
+<html lang="en" suppressHydrationWarning>
+  <head>
+    <script dangerouslySetInnerHTML={{ __html: getUiScalerSsrScript() }} />
+  </head>
+  ...
+</html>
+```
+
+Notes:
+- Pixel transformation (`transformPixels`) is not recommended in SSR apps. It runs on the client after load, so the transformed styles are applied late and can cause visual flicker. Use `rem` units in your styles instead, and rely on `getUiScalerSsrScript()` only.
+- Calling `scaleUI()` on the client is not needed when using `getUiScalerSsrScript()`.
+- `suppressHydrationWarning` is needed on `<html>` in React, since the script adds a `style` attribute to it.
+- If you use a CSP, the inline `<script>` must be allowed: add your nonce to the tag, or allow its hash. See [Content-Security-Policy](#content-security-policy-csp).
+
+## Content-Security-Policy (CSP)
+
+- **Client installation:** nothing to configure. `ui-scaler` does not inject any `<script>` or `<style>` element. It sets the html font-size through the CSSOM and applies its style transformations through a constructable stylesheet (`adoptedStyleSheets`, with a `<style>` element as a fallback for older browsers), so a policy like `script-src 'self'; style-src 'self'` works as is.
+- **SSR installation:** the inline `<script>` must be allowed, with a nonce (`<script nonce="...">`) or its hash. `'unsafe-inline'` is not needed.
 
 ## HTML options binding
 
