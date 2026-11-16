@@ -16,3 +16,11 @@ export type MappedProp = {
   selector: string,
   isExcludedSelector: boolean
 }
+
+export type ResolvedConfig = {
+  shouldTransformPixels: boolean
+  transformPixelsOptions: TransformPixelsOptions
+  baseFontSize: number
+  enableLandscapeScaling: boolean
+  enablePortraitScaling: boolean
+}
