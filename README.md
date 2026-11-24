@@ -7,6 +7,10 @@ In practice:
 - Build your interface once for desktop (landscape) and it will look consistent across all desktop resolutions;
 - Build your interface once for mobile (portrait) and it will look consistent across all mobile resolutions.
 
+## Demo
+
+![ui-scaler demo](https://lnx-tech.atl1.cdn.digitaloceanspaces.com/open-source/ui-scaler/demos/coffee-shop-ui-scaler-demo.gif)
+
 ## Usage
 
 Install the package:
